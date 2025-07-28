@@ -875,5 +875,96 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const pdfContainer = document.getElementById('pdf-container');
+  let scale = 1;
+  let lastDist = null;
+
+  // Wrap PDF content in a zoomable container
+  if (!pdfContainer.querySelector('.zoom-wrapper')) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'zoom-wrapper';
+    wrapper.style.transformOrigin = '0 0';
+    wrapper.style.display = 'inline-block';
+    while (pdfContainer.firstChild) {
+      wrapper.appendChild(pdfContainer.firstChild);
+    }
+    pdfContainer.appendChild(wrapper);
+  }
+
+  const wrapper = pdfContainer.querySelector('.zoom-wrapper');
+
+  function getDistance(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  pdfContainer.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      lastDist = getDistance(e.touches);
+    }
+  }, { passive: false });
+
+  pdfContainer.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && lastDist) {
+      e.preventDefault();
+      const newDist = getDistance(e.touches);
+      const delta = newDist / lastDist;
+      scale *= delta;
+      if (scale < 0.5) scale = 0.5;
+      if (scale > 3) scale = 3;
+      wrapper.style.transform = `scale(${scale})`;
+      lastDist = newDist;
+    }
+  }, { passive: false });
+
+  pdfContainer.addEventListener('touchend', e => {
+    if (e.touches.length < 2) {
+      lastDist = null;
+    }
+  });
+
+  // Ensure export ignores zoom
+  if (window.exportPDF) {
+    const oldExport = window.exportPDF;
+    window.exportPDF = function() {
+      const prevTransform = wrapper.style.transform;
+      wrapper.style.transform = 'scale(1)';
+      oldExport();
+      wrapper.style.transform = prevTransform;
+    };
+  }
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const wrapper = document.querySelector('#pdf-container .zoom-wrapper');
+  if (wrapper && window.exportPDF) {
+    const originalExport = window.exportPDF;
+    window.exportPDF = function() {
+      const prevTransform = wrapper.style.transform;
+      wrapper.style.transform = 'scale(1)';
+      // Capture positions in unscaled space
+      document.querySelectorAll('.draggable').forEach(el => {
+        el.dataset.origLeft = el.style.left;
+        el.dataset.origTop = el.style.top;
+      });
+      originalExport();
+      // Restore state
+      wrapper.style.transform = prevTransform;
+      document.querySelectorAll('.draggable').forEach(el => {
+        el.style.left = el.dataset.origLeft;
+        el.style.top = el.dataset.origTop;
+      });
+    };
+  }
+});
+</script>
+
 </body>
 </html>
