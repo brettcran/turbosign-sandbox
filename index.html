@@ -173,6 +173,29 @@
 }
 </style>
 
+
+<style>
+.signature-selected {
+  outline: 1px dashed #4A90E2;
+}
+.signature-handle {
+  display: none;
+  width: 10px;
+  height: 10px;
+  background: #4A90E2;
+  position: absolute;
+  border-radius: 50%;
+  z-index: 10;
+}
+.signature-selected .signature-handle {
+  display: block;
+}
+.signature-handle.tl { top: -5px; left: -5px; cursor: nwse-resize; }
+.signature-handle.tr { top: -5px; right: -5px; cursor: nesw-resize; }
+.signature-handle.bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.signature-handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+</style>
+
 </head>
 <body class="light"><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script><script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script><script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script><script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <div class="sidebar"><button onclick="triggerUpload()">📂<span class="label">Open</span></button><button onclick="setMode('text')">T<span class="label">Text</span></button><button onclick="openSigModal()">✍<span class="label">Sign</span></button><button onclick="exportPDF()">⬇<span class="label">Save</span></button><button onclick="openSettings()">⚙️<span class="label">Settings</span></button><button onclick="openHelpModal()" style="color:red;">❓<span class="label">Help</span></button></div>
@@ -719,6 +742,136 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.draggable').forEach(el => makeTouchable(el));
   });
   observer.observe(pdfContainer, { childList: true, subtree: true });
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const pdfContainer = document.getElementById('pdf-container');
+
+  // Helper to add resize handles to a signature
+  function addSignatureHandles(sig) {
+    ['tl','tr','bl','br'].forEach(pos => {
+      const handle = document.createElement('div');
+      handle.className = 'signature-handle ' + pos;
+      sig.appendChild(handle);
+      handle.addEventListener('mousedown', startResizeMouse);
+      handle.addEventListener('touchstart', startResizeTouch, { passive: false });
+    });
+  }
+
+  // Observe newly added signatures and make them interactive
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll('img.draggable').forEach(sig => {
+      if (!sig.dataset.enhanced) {
+        addSignatureHandles(sig);
+        makeDraggable(sig);
+        sig.dataset.enhanced = 'true';
+      }
+    });
+  });
+  observer.observe(pdfContainer, { childList: true, subtree: true });
+
+  // Selection logic (show outline and handles when tapped/clicked)
+  document.addEventListener('click', function(e) {
+    document.querySelectorAll('img.draggable').forEach(sig => sig.classList.remove('signature-selected'));
+    const target = e.target.closest('img.draggable');
+    if (target) {
+      target.classList.add('signature-selected');
+    }
+  });
+
+  // Dragging logic
+  function makeDraggable(sig) {
+    let startX, startY, origX, origY, dragging = false;
+    sig.addEventListener('mousedown', e => {
+      if (e.target.classList.contains('signature-handle')) return;
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      origX = parseFloat(sig.style.left || 0);
+      origY = parseFloat(sig.style.top || 0);
+      e.preventDefault();
+    });
+    document.addEventListener('mouseup', () => dragging = false);
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      sig.style.left = (origX + (e.clientX - startX)) + 'px';
+      sig.style.top = (origY + (e.clientY - startY)) + 'px';
+    });
+
+    // Touch dragging
+    sig.addEventListener('touchstart', e => {
+      if (e.target.classList.contains('signature-handle')) return;
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      origX = parseFloat(sig.style.left || 0);
+      origY = parseFloat(sig.style.top || 0);
+      dragging = true;
+    }, { passive: false });
+    sig.addEventListener('touchend', () => dragging = false);
+    sig.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      const touch = e.touches[0];
+      sig.style.left = (origX + (touch.clientX - startX)) + 'px';
+      sig.style.top = (origY + (touch.clientY - startY)) + 'px';
+    }, { passive: false });
+  }
+
+  // Resize logic for mouse
+  function startResizeMouse(e) {
+    e.preventDefault();
+    const sig = e.target.parentElement;
+    const rect = sig.getBoundingClientRect();
+    const startWidth = rect.width;
+    const startHeight = rect.height;
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    function resizeMove(ev) {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      sig.style.width = (startWidth + dx) + 'px';
+      sig.style.height = (startHeight + dy) + 'px';
+    }
+
+    function stopResize() {
+      document.removeEventListener('mousemove', resizeMove);
+      document.removeEventListener('mouseup', stopResize);
+    }
+
+    document.addEventListener('mousemove', resizeMove);
+    document.addEventListener('mouseup', stopResize);
+  }
+
+  // Resize logic for touch
+  function startResizeTouch(e) {
+    e.preventDefault();
+    const sig = e.target.parentElement;
+    const rect = sig.getBoundingClientRect();
+    const startWidth = rect.width;
+    const startHeight = rect.height;
+    const startX = e.touches[0].clientX;
+    const startY = e.touches[0].clientY;
+
+    function resizeMove(ev) {
+      const touch = ev.touches[0];
+      const dx = touch.clientX - startX;
+      const dy = touch.clientY - startY;
+      sig.style.width = (startWidth + dx) + 'px';
+      sig.style.height = (startHeight + dy) + 'px';
+    }
+
+    function stopResize() {
+      document.removeEventListener('touchmove', resizeMove);
+      document.removeEventListener('touchend', stopResize);
+    }
+
+    document.addEventListener('touchmove', resizeMove, { passive: false });
+    document.addEventListener('touchend', stopResize);
+  }
 });
 </script>
 
