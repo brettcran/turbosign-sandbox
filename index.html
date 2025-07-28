@@ -156,6 +156,23 @@
 .text-handle.bl { bottom: -4px; left: -4px; cursor: nesw-resize; }
 .text-handle.br { bottom: -4px; right: -4px; cursor: nwse-resize; }
 </style>
+
+<style>
+@media (max-width: 768px) {
+  .sidebar {
+    width: 56px;
+  }
+  #pdf-container {
+    margin-left: 56px;
+    padding: 10px;
+  }
+  .modal-centered {
+    width: 90%;
+    max-width: 400px;
+  }
+}
+</style>
+
 </head>
 <body class="light"><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script><script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script><script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script><script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <div class="sidebar"><button onclick="triggerUpload()">📂<span class="label">Open</span></button><button onclick="setMode('text')">T<span class="label">Text</span></button><button onclick="openSigModal()">✍<span class="label">Sign</span></button><button onclick="exportPDF()">⬇<span class="label">Save</span></button><button onclick="openSettings()">⚙️<span class="label">Settings</span></button><button onclick="openHelpModal()" style="color:red;">❓<span class="label">Help</span></button></div>
@@ -637,6 +654,71 @@ document.addEventListener('DOMContentLoaded', function() {
   if (sigClose) sigClose.addEventListener('click', closeModals);
   if (settingsClose) settingsClose.addEventListener('click', closeModals);
   if (helpClose) helpClose.addEventListener('click', closeModals);
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const pdfContainer = document.getElementById('pdf-container');
+  let mode = null;
+  let isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+  // Override setMode to retain original logic if defined
+  if (window.setMode) {
+    const oldSetMode = window.setMode;
+    window.setMode = function(newMode) {
+      mode = newMode;
+      oldSetMode(newMode);
+    }
+  }
+
+  // Tap-to-add-text for mobile (single tap), double-click for desktop
+  if (isTouch) {
+    pdfContainer.addEventListener('click', e => {
+      if (mode !== 'text' || !e.target.closest('canvas')) return;
+      e.preventDefault();
+      const canvas = e.target.closest('canvas');
+      const container = canvas.parentElement;
+      const el = document.createElement('div');
+      el.textContent = "Enter text";
+      el.contentEditable = true;
+      el.className = "draggable";
+      el.style.position = "absolute";
+      el.style.left = e.offsetX + "px";
+      el.style.top = e.offsetY + "px";
+      el.style.width = "200px";
+      el.style.fontSize = "15px";
+      el.style.color = "#000";
+      el.style.fontFamily = "Arial";
+      container.appendChild(el);
+      enableDrag(el, false);
+    });
+  }
+
+  // Add touch events for dragging draggable elements
+  function makeTouchable(el) {
+    let startX, startY, origX, origY;
+    el.addEventListener('touchstart', function(e) {
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      origX = parseFloat(el.style.left || 0);
+      origY = parseFloat(el.style.top || 0);
+    });
+    el.addEventListener('touchmove', function(e) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - startX;
+      const dy = touch.clientY - startY;
+      el.style.left = (origX + dx) + 'px';
+      el.style.top = (origY + dy) + 'px';
+    });
+  }
+
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll('.draggable').forEach(el => makeTouchable(el));
+  });
+  observer.observe(pdfContainer, { childList: true, subtree: true });
 });
 </script>
 
