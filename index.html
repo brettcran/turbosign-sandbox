@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>PDFill-Sign with Save Modal</title>
+<title>PDFill-Sign Full Fix</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script>
@@ -17,8 +17,9 @@
   .draggable {position:absolute;cursor:move;user-select:text;font-family:Arial;white-space:pre-wrap;color:#000;font-size:15px;min-width:50px;min-height:20px;padding:2px;}
   .draggable.focused {outline:1px dashed #4CAF50;}
   .placeholder {color:#888;}
+  .resize-handle {position:absolute;width:15px;height:15px;background:#4CAF50;border-radius:50%;bottom:-8px;right:-8px;cursor:se-resize;z-index:10;}
   #backdrop {display:none;position:fixed;width:100%;height:100%;top:0;left:0;background:rgba(0,0,0,0.5);z-index:1000;}
-  .modal {display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:#333;padding:20px 30px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.3);min-width:300px;z-index:1001;}
+  .modal {display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:#333;padding:20px 30px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.3);min-width:300px;z-index:1001;max-height:80%;overflow:auto;}
   .modal h2 {margin-top:0;font-size:20px;color:#2f2f2f;text-align:center;}
   .modal label {display:block;margin:10px 0;font-weight:bold;}
   .modal select,.modal input[type="color"],.modal input[type="text"] {margin-top:5px;padding:5px;border:1px solid #ccc;border-radius:6px;width:100%;}
@@ -71,147 +72,18 @@ function openSettings(){document.getElementById('settings-modal').style.display=
 function openSignatureModal(){document.getElementById('signature-modal').style.display='block';document.getElementById('backdrop').style.display='block';initSignaturePad();}
 function openSaveModal(){document.getElementById('save-modal').style.display='block';document.getElementById('backdrop').style.display='block';}
 function closeModals(){document.querySelectorAll('.modal').forEach(m=>m.style.display='none');document.getElementById('backdrop').style.display='none';}
-function applySettings(){
-  defaultFont=document.getElementById('font-family').value;
-  defaultSize=parseInt(document.getElementById('font-size').value);
-  defaultColor=document.getElementById('font-color').value;
-  document.querySelectorAll('.draggable').forEach(el=>{
-    el.style.fontFamily=defaultFont;
-    el.style.fontSize=defaultSize+'px';
-    el.style.color=defaultColor;
-  });
-}
-function resetDefaults(){
-  defaultFont='Arial';defaultSize=15;defaultColor='#000';
-  document.getElementById('font-family').value='Arial';
-  document.getElementById('font-size').value='15';
-  document.getElementById('font-color').value='#000000';
-  applySettings();
-}
-function initSignaturePad(){
-  const canvas=document.getElementById('sig-canvas');
-  const ctx=canvas.getContext('2d');
-  let drawing=false;
-
-  function startDraw(x,y){
-    drawing=true;
-    ctx.beginPath();
-    ctx.moveTo(x,y);
-  }
-  function draw(x,y){
-    if(drawing){
-      ctx.lineTo(x,y);
-      ctx.stroke();
-    }
-  }
-  function endDraw(){ drawing=false; }
-
-  // Mouse support
-  canvas.onmousedown=e=>startDraw(e.offsetX,e.offsetY);
-  canvas.onmousemove=e=>draw(e.offsetX,e.offsetY);
-  canvas.onmouseup=endDraw;
-
-  // Touch support
-  canvas.addEventListener('touchstart',e=>{
-    const touch=e.touches[0];
-    const rect=canvas.getBoundingClientRect();
-    startDraw(touch.clientX-rect.left, touch.clientY-rect.top);
-    e.preventDefault();
-  },{passive:false});
-  canvas.addEventListener('touchmove',e=>{
-    const touch=e.touches[0];
-    const rect=canvas.getBoundingClientRect();
-    draw(touch.clientX-rect.left, touch.clientY-rect.top);
-    e.preventDefault();
-  },{passive:false});
-  canvas.addEventListener('touchend',endDraw,{passive:false});
-}
-function clearSignature(){
-  const canvas=document.getElementById('sig-canvas');
-  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
-}
-function saveSignature(){
-  const canvas=document.getElementById('sig-canvas');
-  signatureData=canvas.toDataURL();
-  closeModals();
-  currentMode='sign';
-}
-async function renderPDF(file){
-  const arrayBuffer=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;container.innerHTML='';
-  for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i);const viewport=page.getViewport({scale:1.25});const canvas=document.createElement('canvas');const ctx=canvas.getContext('2d');canvas.width=viewport.width;canvas.height=viewport.height;container.appendChild(canvas);await page.render({canvasContext:ctx,viewport}).promise;}}
+function applySettings(){defaultFont=document.getElementById('font-family').value;defaultSize=parseInt(document.getElementById('font-size').value);defaultColor=document.getElementById('font-color').value;document.querySelectorAll('.draggable').forEach(el=>{el.style.fontFamily=defaultFont;el.style.fontSize=defaultSize+'px';el.style.color=defaultColor;});}
+function resetDefaults(){defaultFont='Arial';defaultSize=15;defaultColor='#000';document.getElementById('font-family').value='Arial';document.getElementById('font-size').value='15';document.getElementById('font-color').value='#000000';applySettings();}
+function initSignaturePad(){const canvas=document.getElementById('sig-canvas');const ctx=canvas.getContext('2d');let drawing=false;function startDraw(x,y){drawing=true;ctx.beginPath();ctx.moveTo(x,y);}function draw(x,y){if(drawing){ctx.lineTo(x,y);ctx.stroke();}}function endDraw(){drawing=false;}canvas.onmousedown=e=>startDraw(e.offsetX,e.offsetY);canvas.onmousemove=e=>draw(e.offsetX,e.offsetY);canvas.onmouseup=endDraw;canvas.addEventListener('touchstart',e=>{const t=e.touches[0],r=canvas.getBoundingClientRect();startDraw(t.clientX-r.left,t.clientY-r.top);e.preventDefault();},{passive:false});canvas.addEventListener('touchmove',e=>{const t=e.touches[0],r=canvas.getBoundingClientRect();draw(t.clientX-r.left,t.clientY-r.top);e.preventDefault();},{passive:false});canvas.addEventListener('touchend',endDraw,{passive:false});}
+function clearSignature(){const c=document.getElementById('sig-canvas');c.getContext('2d').clearRect(0,0,c.width,c.height);}
+function saveSignature(){const c=document.getElementById('sig-canvas');signatureData=c.toDataURL();closeModals();currentMode='sign';}
+async function renderPDF(file){const arrayBuffer=await file.arrayBuffer();const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;container.innerHTML='';for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i);const viewport=page.getViewport({scale:1.25});const canvas=document.createElement('canvas');const ctx=canvas.getContext('2d');canvas.width=viewport.width;canvas.height=viewport.height;container.appendChild(canvas);await page.render({canvasContext:ctx,viewport}).promise;}}
 fileInput.addEventListener('change',e=>{if(e.target.files[0])renderPDF(e.target.files[0]);});
-container.addEventListener('dblclick',e=>{
-  if(currentMode==='text'){
-    const box=document.createElement('div');
-    box.contentEditable=true;box.spellcheck=false;
-    box.className='draggable placeholder focused';
-    box.style.fontFamily=defaultFont;box.style.fontSize=defaultSize+'px';box.style.color=defaultColor;
-    box.style.left=e.pageX-container.getBoundingClientRect().left+'px';
-    box.style.top=e.pageY-container.getBoundingClientRect().top+'px';
-    box.textContent='Edit text';
-    container.appendChild(box);
-    enableDrag(box);
-    box.addEventListener('focus',()=>{
-      box.classList.add('focused');
-      if(box.classList.contains('placeholder')){box.textContent='';box.classList.remove('placeholder');}
-    });
-    box.addEventListener('blur',()=>{
-      box.classList.remove('focused');
-      if(box.textContent.trim()===''){box.textContent='Edit text';box.classList.add('placeholder');}
-    });
-  } else if(currentMode==='sign' && signatureData){
-    const img=document.createElement('img');
-    img.src=signatureData;
-    img.className='draggable';
-    img.style.left=e.pageX-container.getBoundingClientRect().left+'px';
-    img.style.top=e.pageY-container.getBoundingClientRect().top+'px';
-    img.style.maxWidth='300px';
-    container.appendChild(img);
-    enableDrag(img);
-  }
-});
-function enableDrag(el){
-  let offsetX=0,offsetY=0,isDragging=false;
-  el.addEventListener('mousedown',ev=>{
-    if(!el.classList.contains('focused')){
-      isDragging=true;offsetX=ev.clientX-parseFloat(el.style.left||0);offsetY=ev.clientY-parseFloat(el.style.top||0);ev.preventDefault();
-    }
-  });
-  document.addEventListener('mouseup',()=>{isDragging=false;});
-  document.addEventListener('mousemove',ev=>{if(isDragging){el.style.left=(ev.clientX-offsetX)+'px';el.style.top=(ev.clientY-offsetY)+'px';}});
-}
-async function exportWithFilename(){
-  const filename=document.getElementById('save-filename').value||'exported.pdf';
-  await generatePDF(filename);
-  closeModals();
-}
-async function generatePDF(filename){
-  const {PDFDocument,rgb}=window.PDFLib;
-  const pdfDoc=await PDFDocument.create();
-  const canvases=document.querySelectorAll('#pdf-container canvas');
-  for(const c of canvases){
-    const page=pdfDoc.addPage([c.width,c.height]);
-    const img=await pdfDoc.embedJpg(c.toDataURL('image/jpeg',0.8));
-    page.drawImage(img,{x:0,y:0,width:c.width,height:c.height});
-    const elements=document.querySelectorAll('.draggable');
-    for(const el of elements){
-      const r=el.getBoundingClientRect(),cr=c.getBoundingClientRect();
-      const x=r.left-cr.left;
-      const y=c.height-(r.top-cr.top)-r.height;
-      if(el.tagName==='IMG'){
-        const png=await pdfDoc.embedPng(el.src);
-        page.drawImage(png,{x,y,width:r.width,height:r.height});
-      } else {
-        page.drawText(el.textContent,{x,y,size:parseInt(el.style.fontSize)||15,color:rgb(...hexToRgb(el.style.color||'#000'))});
-      }
-    }
-  }
-  const bytes=await pdfDoc.save();
-  const link=document.createElement('a');
-  link.href=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
-  link.download=filename;
-  link.click();
-}
+container.addEventListener('dblclick',e=>{if(currentMode==='text'){const box=document.createElement('div');box.contentEditable=true;box.spellcheck=false;box.className='draggable placeholder focused';box.style.fontFamily=defaultFont;box.style.fontSize=defaultSize+'px';box.style.color=defaultColor;box.style.left=e.pageX-container.getBoundingClientRect().left+'px';box.style.top=e.pageY-container.getBoundingClientRect().top+'px';box.textContent='Edit text';container.appendChild(box);enableDrag(box);box.addEventListener('focus',()=>{box.classList.add('focused');if(box.classList.contains('placeholder')){box.textContent='';box.classList.remove('placeholder');}});box.addEventListener('blur',()=>{box.classList.remove('focused');if(box.textContent.trim()===''){box.textContent='Edit text';box.classList.add('placeholder');}});box.addEventListener('click',()=>{box.focus();});}else if(currentMode==='sign'&&signatureData){const img=document.createElement('div');const inner=document.createElement('img');inner.src=signatureData;inner.style.width='100%';inner.style.height='100%';img.className='draggable';img.style.left=e.pageX-container.getBoundingClientRect().left+'px';img.style.top=e.pageY-container.getBoundingClientRect().top+'px';img.style.width='300px';img.style.height='auto';img.appendChild(inner);container.appendChild(img);enableDrag(img);enableResize(img);}});
+function enableDrag(el){let offsetX=0,offsetY=0,isDragging=false,startTouchX=0,startTouchY=0,moved=false;el.addEventListener('mousedown',ev=>{if(!el.classList.contains('focused')){isDragging=true;offsetX=ev.clientX-parseFloat(el.style.left||0);offsetY=ev.clientY-parseFloat(el.style.top||0);ev.preventDefault();}});document.addEventListener('mouseup',()=>{isDragging=false;moved=false;});document.addEventListener('mousemove',ev=>{if(isDragging){el.style.left=(ev.clientX-offsetX)+'px';el.style.top=(ev.clientY-offsetY)+'px';}});el.addEventListener('touchstart',ev=>{const touch=ev.touches[0];startTouchX=touch.clientX;startTouchY=touch.clientY;moved=false;offsetX=touch.clientX-parseFloat(el.style.left||0);offsetY=touch.clientY-parseFloat(el.style.top||0);},{passive:false});el.addEventListener('touchmove',ev=>{const touch=ev.touches[0];const dx=Math.abs(touch.clientX-startTouchX);const dy=Math.abs(touch.clientY-startTouchY);if(dx>5||dy>5){isDragging=true;moved=true;el.style.left=(touch.clientX-offsetX)+'px';el.style.top=(touch.clientY-offsetY)+'px';ev.preventDefault();}},{passive:false});el.addEventListener('touchend',()=>{isDragging=false;});}
+function enableResize(el){const handle=document.createElement('div');handle.className='resize-handle';el.style.position='absolute';el.appendChild(handle);let startX=0,startY=0,startW=0,startH=0,isResizing=false;handle.addEventListener('mousedown',e=>{e.stopPropagation();isResizing=true;startX=e.clientX;startY=e.clientY;startW=parseFloat(getComputedStyle(el).width);startH=parseFloat(getComputedStyle(el).height);e.preventDefault();});document.addEventListener('mousemove',e=>{if(isResizing){const dx=e.clientX-startX;const dy=e.clientY-startY;el.style.width=(startW+dx)+'px';el.style.height=(startH+dy)+'px';}});document.addEventListener('mouseup',()=>{isResizing=false;});handle.addEventListener('touchstart',e=>{e.stopPropagation();const t=e.touches[0];isResizing=true;startX=t.clientX;startY=t.clientY;startW=parseFloat(getComputedStyle(el).width);startH=parseFloat(getComputedStyle(el).height);e.preventDefault();},{passive:false});document.addEventListener('touchmove',e=>{if(isResizing){const t=e.touches[0];const dx=t.clientX-startX;const dy=t.clientY-startY;el.style.width=(startW+dx)+'px';el.style.height=(startH+dy)+'px';}},{passive:false});document.addEventListener('touchend',()=>{isResizing=false;});}
+async function exportWithFilename(){const filename=document.getElementById('save-filename').value||'exported.pdf';await generatePDF(filename);closeModals();}
+async function generatePDF(filename){const {PDFDocument,rgb}=window.PDFLib;const pdfDoc=await PDFDocument.create();const canvases=document.querySelectorAll('#pdf-container canvas');for(const c of canvases){const page=pdfDoc.addPage([c.width,c.height]);const img=await pdfDoc.embedJpg(c.toDataURL('image/jpeg',0.8));page.drawImage(img,{x:0,y:0,width:c.width,height:c.height});const elements=document.querySelectorAll('.draggable');for(const el of elements){const r=el.getBoundingClientRect(),cr=c.getBoundingClientRect();const x=r.left-cr.left;const y=c.height-(r.top-cr.top)-r.height;if(el.querySelector('img')){const innerImg=el.querySelector('img');const png=await pdfDoc.embedPng(innerImg.src);page.drawImage(png,{x,y,width:r.width,height:r.height});}else{page.drawText(el.textContent,{x,y,size:parseInt(el.style.fontSize)||15,color:rgb(...hexToRgb(el.style.color||'#000'))});}}}const bytes=await pdfDoc.save();const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));link.download=filename;link.click();}
 function hexToRgb(hex){hex=hex.replace('#','');if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');const num=parseInt(hex,16);return [((num>>16)&255)/255,((num>>8)&255)/255,(num&255)/255];}
 </script>
 </body>
