@@ -92,9 +92,39 @@ function initSignaturePad(){
   const canvas=document.getElementById('sig-canvas');
   const ctx=canvas.getContext('2d');
   let drawing=false;
-  canvas.onmousedown=e=>{drawing=true;ctx.beginPath();ctx.moveTo(e.offsetX,e.offsetY);};
-  canvas.onmouseup=()=>{drawing=false;};
-  canvas.onmousemove=e=>{if(drawing){ctx.lineTo(e.offsetX,e.offsetY);ctx.stroke();}};
+
+  function startDraw(x,y){
+    drawing=true;
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+  }
+  function draw(x,y){
+    if(drawing){
+      ctx.lineTo(x,y);
+      ctx.stroke();
+    }
+  }
+  function endDraw(){ drawing=false; }
+
+  // Mouse support
+  canvas.onmousedown=e=>startDraw(e.offsetX,e.offsetY);
+  canvas.onmousemove=e=>draw(e.offsetX,e.offsetY);
+  canvas.onmouseup=endDraw;
+
+  // Touch support
+  canvas.addEventListener('touchstart',e=>{
+    const touch=e.touches[0];
+    const rect=canvas.getBoundingClientRect();
+    startDraw(touch.clientX-rect.left, touch.clientY-rect.top);
+    e.preventDefault();
+  },{passive:false});
+  canvas.addEventListener('touchmove',e=>{
+    const touch=e.touches[0];
+    const rect=canvas.getBoundingClientRect();
+    draw(touch.clientX-rect.left, touch.clientY-rect.top);
+    e.preventDefault();
+  },{passive:false});
+  canvas.addEventListener('touchend',endDraw,{passive:false});
 }
 function clearSignature(){
   const canvas=document.getElementById('sig-canvas');
