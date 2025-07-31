@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TurboSign 2.4 Gold (Mobile & Desktop)</title>
+  <title>TurboSign 2.4 Gold</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="logo.png" sizes="192x192" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -11,60 +11,43 @@
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
   <style>
     body { margin:0; font-family:Arial,sans-serif; background:#f5f5f5; }
-    .toolbar {
-      position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+    .toolbar { position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
       width:90%; max-width:600px; height:56px;
       background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3);
       backdrop-filter:blur(10px); display:flex; justify-content:space-around; align-items:center;
-      padding:0 8px; box-shadow:0 4px 20px rgba(0,0,0,0.1); border-radius:30px; z-index:1000;
-    }
-    .toolbar button {
-      width:48px; height:48px; background:#333; border:none; border-radius:50%;
+      padding:0 8px; box-shadow:0 4px 20px rgba(0,0,0,0.1); border-radius:30px; z-index:1000; }
+    .toolbar button { width:48px; height:48px; background:#333; border:none; border-radius:50%;
       display:flex; justify-content:center; align-items:center; cursor:pointer;
-      transition:background 0.3s, transform 0.2s;
-    }
+      transition:background 0.3s, transform 0.2s; }
     .toolbar button svg { stroke:#fff; width:24px; height:24px; }
     .toolbar button:hover { background:#444; transform:translateY(-2px); }
     .toolbar button.active { background:#000; border:2px solid #0ff; box-shadow:0 0 8px #0ff; }
     .toolbar button.active svg { stroke:#0ff; }
-    #pdf-container {
-      margin:20px; padding-bottom:100px; background:#eee; overflow-y:auto;
-      height:calc(100vh - 100px); transform-origin: top center;
-    }
-    canvas {
-      display:block; margin:20px auto; background:#fff;
-      border:1px solid #ccc; border-radius:8px;
-    }
-    .draggable {
-      position:absolute; cursor:move; user-select:text;
+    #pdf-container { margin:20px; padding-bottom:100px; background:#eee; overflow-y:auto;
+      height:calc(100vh - 100px); transform-origin: top center; }
+    .page-wrapper { position:relative; }
+    canvas { display:block; margin:20px auto; background:#fff;
+      border:1px solid #ccc; border-radius:8px; }
+    .draggable { position:absolute; cursor:move; user-select:text;
       font-family:Arial; white-space:pre-wrap; color:#000;
-      font-size:15px; min-width:50px; min-height:20px; padding:2px;
-    }
+      font-size:15px; min-width:50px; min-height:20px; padding:2px; }
     .draggable.focused { outline:1px dashed #4CAF50; }
     .placeholder { color:#888; }
-    #backdrop {
-      display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,0.5); z-index:999;
-    }
-    .modal {
-      display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    #backdrop { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.5); z-index:999; }
+    .modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
       width:90%; max-width:360px; background:rgba(255,255,255,0.15);
       border:1px solid rgba(255,255,255,0.3); backdrop-filter:blur(10px);
       padding:20px; border-radius:30px; box-shadow:0 4px 20px rgba(0,0,0,0.1);
-      z-index:1001; color:#333;
-    }
+      z-index:1001; color:#333; }
     .modal h2 { margin-top:0; text-align:center; }
     .modal label { display:block; margin:10px 0; font-weight:bold; }
-    .modal select, .modal input, .modal button {
-      width:100%; margin-top:10px; padding:8px;
+    .modal select, .modal input, .modal button { width:100%; margin-top:10px; padding:8px;
       border:1px solid rgba(255,255,255,0.5); border-radius:8px;
-      background:rgba(51,51,51,0.5); color:#fff; cursor:pointer; box-sizing:border-box;
-    }
+      background:rgba(51,51,51,0.5); color:#fff; cursor:pointer; box-sizing:border-box; }
     .modal button:hover { background:rgba(68,68,68,0.7); }
-    #signature-modal canvas {
-      width:100%; height:auto; box-sizing:border-box;
-      border:1px solid rgba(255,255,255,0.5); border-radius:8px;
-    }
+    #signature-modal canvas { width:100%; height:auto; box-sizing:border-box;
+      border:1px solid rgba(255,255,255,0.5); border-radius:8px; }
     @media (max-width:480px) {
       .toolbar { bottom:8px; height:48px; padding:0 4px; }
       .toolbar button { width:40px; height:40px; }
@@ -128,7 +111,7 @@
   </div>
 
   <script>
-    console.log('🚀 TurboSign script initialized');
+    console.log('🚀 TurboSign initialized');
     feather.replace();
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -150,9 +133,9 @@
     const signatureModal = document.getElementById('signature-modal');
     const saveModal      = document.getElementById('save-modal');
 
-    let currentMode    = null;
-    let scale          = 1;
-    let defaultFont    = 'Arial', defaultSize = 15, defaultColor = '#000';
+    let currentMode      = null;
+    let scale            = 1;
+    let defaultFont      = 'Arial', defaultSize = 15, defaultColor = '#000';
     window.signatureData = null;
 
     function clearActive(){
@@ -173,19 +156,23 @@
       for(let i=1;i<=pdf.numPages;i++){
         const page = await pdf.getPage(i);
         const vp   = page.getViewport({scale:1.25});
-        const c    = document.createElement('canvas');
-        c.width=c.height=0; c.width=vp.width; c.height=vp.height;
-        container.appendChild(c);
+        // wrap canvas
+        const wrapper = document.createElement('div');
+        wrapper.className = 'page-wrapper';
+        const c = document.createElement('canvas');
+        c.width = vp.width; c.height = vp.height;
+        wrapper.appendChild(c);
+        container.appendChild(wrapper);
         await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
       }
     });
 
-    // Text
+    // Text tool
     btns.text.addEventListener('click', ()=>{
       clearActive(); btns.text.classList.add('active'); currentMode='text'; closeModals();
     });
 
-    // Stamps UI
+    // Stamp UI
     btns.stampUI.addEventListener('click', ()=>{
       clearActive(); btns.stampUI.classList.add('active'); openModal(stampModal);
     });
@@ -208,7 +195,7 @@
       container.style.transform = `scale(${scale})`;
     });
 
-    // Signature
+    // Signature tool
     btns.sign.addEventListener('click', ()=>{
       clearActive(); btns.sign.classList.add('active');
       currentMode='sign'; openModal(signatureModal); initSignaturePad();
@@ -219,9 +206,9 @@
       clearActive(); btns.settings.classList.add('active'); openModal(settingsModal);
     });
     document.getElementById('apply-settings').addEventListener('click', ()=>{
-      defaultFont = document.getElementById('font-family').value;
-      defaultSize = +document.getElementById('font-size').value;
-      defaultColor= document.getElementById('font-color').value;
+      defaultFont  = document.getElementById('font-family').value;
+      defaultSize  = +document.getElementById('font-size').value;
+      defaultColor = document.getElementById('font-color').value;
       document.querySelectorAll('.draggable').forEach(el=>{
         el.style.fontFamily = defaultFont;
         el.style.fontSize   = defaultSize + 'px';
@@ -236,13 +223,13 @@
       btns.settings.click();
     });
 
-    // Save
+    // Save PDF
     btns.save.addEventListener('click', ()=>{
       clearActive(); btns.save.classList.add('active'); openModal(saveModal);
     });
     document.getElementById('download-pdf').addEventListener('click', async ()=>{
       const fname = document.getElementById('save-filename').value || 'exported.pdf';
-      const {PDFDocument,rgb} = PDFLib;
+      const { PDFDocument } = PDFLib;
       const pdfDoc = await PDFDocument.create();
       for(const c of document.querySelectorAll('#pdf-container canvas')){
         const p   = pdfDoc.addPage([c.width,c.height]);
@@ -256,9 +243,8 @@
       closeModals();
     });
 
-    // Signature pad logic
-    const sigCanvas = document.getElementById('sig-canvas'),
-          sigCtx    = sigCanvas.getContext('2d');
+    // Signature pad
+    const sigCanvas = document.getElementById('sig-canvas'), sigCtx = sigCanvas.getContext('2d');
     function initSignaturePad(){
       sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
       sigCtx.strokeStyle='#ccc'; sigCtx.lineWidth=1;
@@ -270,57 +256,56 @@
       sigCanvas.onmouseup   = ()=>drawing=false;
       sigCanvas.onmousemove = e=>{ if(drawing){ sigCtx.lineTo(e.offsetX,e.offsetY); sigCtx.stroke(); }};
     }
-    document.getElementById('clear-sign').addEventListener('click', ()=>{
-      initSignaturePad();
-    });
+    document.getElementById('clear-sign').addEventListener('click', ()=>initSignaturePad());
     document.getElementById('save-sign').addEventListener('click', ()=>{
       window.signatureData = sigCanvas.toDataURL(); closeModals();
     });
 
-    // Placement handler
+    // Annotation placement
     container.addEventListener('dblclick', e=>{
-      const rect = container.getBoundingClientRect();
-      const x    = (e.clientX - rect.left) / scale;
-      const y    = (e.clientY - rect.top) / scale;
+      const canvas = e.target.closest('canvas');
+      if(!canvas) return;
+      const wrapper = canvas.parentElement;
+      const rect = canvas.getBoundingClientRect();
+      const x    = (e.clientX - rect.left)/scale;
+      const y    = (e.clientY - rect.top)/scale;
       if(currentMode==='text'){
         const box = document.createElement('div');
         box.contentEditable=true; box.spellcheck=false;
         box.className='draggable placeholder';
-        box.style.cssText += `left:${x}px;top:${y}px;font-family:${defaultFont};font-size:${defaultSize}px;color:${defaultColor}`;
-        box.textContent='Edit text';
-        container.appendChild(box); enableDrag(box);
+        box.style.left=x+'px'; box.style.top=y+'px';
+        box.style.fontFamily=defaultFont; box.style.fontSize=defaultSize+'px'; box.style.color=defaultColor;
+        box.textContent='Edit text'; wrapper.appendChild(box); enableDrag(box);
         box.addEventListener('focus', ()=>{ box.classList.add('focused'); if(box.textContent==='Edit text'){ box.textContent=''; }});
         box.addEventListener('blur',  ()=>{ box.classList.remove('focused'); if(!box.textContent.trim()){ box.textContent='Edit text'; }});
       } else if(currentMode&&currentMode.startsWith('stamp-')){
-        const mark = document.createElement('i'); mark.className='draggable';
-        const nm   = currentMode==='stamp-check'?'check-circle':currentMode==='stamp-x'?'x':'square';
-        mark.innerHTML=feather.icons[nm].toSvg(); container.appendChild(mark);
+        const mark=document.createElement('i'); mark.className='draggable';
+        const nm = currentMode==='stamp-check'?'check-circle':currentMode==='stamp-x'?'x':'square';
+        mark.innerHTML=feather.icons[nm].toSvg(); wrapper.appendChild(mark); feather.replace();
         mark.style.left=x+'px'; mark.style.top=y+'px'; enableDrag(mark);
       } else if(currentMode==='sign'&&window.signatureData){
-        const img = document.createElement('img'); img.src=window.signatureData; img.className='draggable';
-        container.appendChild(img);
-        feather.replace();
+        const img=document.createElement('img'); img.src=window.signatureData; img.className='draggable';
+        wrapper.appendChild(img); feather.replace();
         img.style.left=x+'px'; img.style.top=y+'px'; enableDrag(img);
       }
     });
 
-    // Re-edit text
+    // Re-open text for editing
     container.addEventListener('click', e=>{
-      const el=e.target;
-      if(el.classList.contains('draggable')&&el.tagName==='DIV'){
-        clearActive(); currentMode='text'; el.contentEditable=true; el.focus();
+      if(e.target.classList.contains('draggable') && e.target.tagName==='DIV'){
+        clearActive(); currentMode='text'; e.target.contentEditable=true; e.target.focus();
       }
     });
 
-    // Drag utility
+    // Drag utility (desktop+mobile)
     function enableDrag(el){
-      let ox=0,oy=0,dragging=false;
+      let ox=0, oy=0, dragging=false;
       function start(ev){ ev.preventDefault(); dragging=true;
         const cx=ev.touches?ev.touches[0].clientX:ev.clientX,
               cy=ev.touches?ev.touches[0].clientY:ev.clientY;
         ox=cx-parseFloat(el.style.left||0); oy=cy-parseFloat(el.style.top||0);
       }
-      function move(ev){ if(!dragging) return; ev.preventDefault();
+      function move(ev){ if(!dragging)return; ev.preventDefault();
         const cx=ev.touches?ev.touches[0].clientX:ev.clientX,
               cy=ev.touches?ev.touches[0].clientY:ev.clientY;
         el.style.left=(cx-ox)+'px'; el.style.top=(cy-oy)+'px';
@@ -334,8 +319,9 @@
       document.addEventListener('touchend',end);
     }
 
-    // Close modals
+    // Close modals on backdrop click
     backdrop.addEventListener('click', closeModals);
+  });
   </script>
 </body>
 </html>
