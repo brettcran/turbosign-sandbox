@@ -180,8 +180,7 @@
   <!-- Icons -->
   <script src="https://unpkg.com/feather-icons@4.29.2/dist/feather.min.js"></script>
 
-  <!-- PDF.js: local (if present) + CDN fallback -->
-  <script src="pdf.min.js"></script>
+  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>window.__PDFJS_WORKER__="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 
@@ -209,7 +208,7 @@ const settingsModal = document.getElementById('settings-modal');
 
 let currentMode=null, signatureData=null, activeWrap=null, openedFileName=null;
 
-/* ---------- zoom/pan with centering & clamping ---------- */
+/* ---------- zoom/pan ---------- */
 let zoom=1, panX=0, panY=0;
 const ZMIN=0.6, ZMAX=3.0;
 function clamp(n,min,max){ return Math.min(max, Math.max(min, n)); }
@@ -242,7 +241,7 @@ function centerContentOnce(){
   panX = (vw - cw)/2; panY = Math.max(20, (vh - ch)/3);
   applyTransform();
 }
-window.addEventListener('resize', ()=>{ applyTransform(); scheduleSave(); });
+window.addEventListener('resize', ()=>{ applyTransform(); rescaleAllText(); scheduleSave(); });
 
 /* ---------- text defaults ---------- */
 const TEXT_DEFAULTS = { size: 16, font: "Arial, sans-serif" };
@@ -296,11 +295,10 @@ fileInput.addEventListener('change', async (e)=>{
   try{
     await ensurePdfEngine();
     const buf=await f.arrayBuffer();
-    const hash = await sha8(buf);             // first 8 hex of SHA-256
+    const hash = await sha8(buf);
     __TS_DOC__ = { name: openedFileName, hash, bytes: buf };
     await openAndRender(buf);
     toast('PDF loaded'); centerContentOnce();
-    // ask to restore if a session exists for this file
     tryRestorePrompt();
   }catch(err){ console.error('[Open PDF] Error:', err); toast('Failed to open PDF','err',2600); }
 });
@@ -330,6 +328,7 @@ async function openAndRender(bytes){
     pdfContainer.appendChild(wrap);
   }
   applyTransform();
+  rescaleAllText(); // ensure any restored text matches display scale
 }
 
 /* ---------- stamps ---------- */
@@ -364,6 +363,22 @@ pdfContainer.addEventListener('touchend',(e)=>{
   lastTap=now;
 },{passive:false});
 
+function displayScaleFor(wrap){
+  const canvas=wrap?.querySelector('canvas.pdfpage'); if(!canvas) return 1;
+  const cw = canvas.clientWidth || canvas.width;
+  return cw / canvas.width || 1;
+}
+function applyDisplayScaleToTexts(wrap){
+  const ds = displayScaleFor(wrap) || 1;
+  wrap.querySelectorAll('.text-anno').forEach(el=>{
+    const base = parseFloat(el.dataset.basePx) || parseInt(getComputedStyle(el).fontSize) || TEXT_DEFAULTS.size;
+    el.style.fontSize = (base / ds) + 'px';
+  });
+}
+function rescaleAllText(){
+  document.querySelectorAll('.page-wrap').forEach(applyDisplayScaleToTexts);
+}
+
 function placeAt(clientX, clientY, targetEl){
   if(!currentMode) return;
   const wrap=targetEl?.closest?.('.page-wrap'); if(!wrap) return;
@@ -378,28 +393,29 @@ function placeAt(clientX, clientY, targetEl){
   if(currentMode==='text'){
     const d=document.createElement('div');
     d.className='draggable text-anno'; d.contentEditable=true; d.textContent='Text';
-    Object.assign(d.style,{ left:x+'px', top:y+'px', fontSize:TEXT_DEFAULTS.size+'px', fontFamily:TEXT_DEFAULTS.font });
+    d.dataset.basePx = String(TEXT_DEFAULTS.size);          // store base size
+    d.style.fontFamily = TEXT_DEFAULTS.font;
+    // set visual size normalized by display scale
+    const ds = displayScaleFor(wrap) || 1;
+    d.style.fontSize = (TEXT_DEFAULTS.size / ds) + 'px';
+
+    Object.assign(d.style,{ left:x+'px', top:y+'px' });
     d.addEventListener('input', scheduleSave);
     d.addEventListener('blur', scheduleSave);
     ov.appendChild(d); bindDrag(d);
   }else if(currentMode.startsWith('stamp-')){
     const nm=currentMode.split('-')[1];
     const icon=(nm==='check')?'check-circle':(nm==='x'?'x':'square');
-
     const box=document.createElement('div');
     box.className='draggable icon-anno';
-    box.dataset.icon = icon; // <-- for restore/export
+    box.dataset.icon = icon;
     Object.assign(box.style,{left:x+'px', top:y+'px', position:'absolute', width:'26px', height:'26px'});
-
     const svg=makeStampSvg(icon,26); svg.style.width='100%'; svg.style.height='100%';
     box.appendChild(svg);
-
-    ov.appendChild(box);
-    bindDrag(box);
-    bindPinchResize(box);
+    ov.appendChild(box); bindDrag(box); bindPinchResize(box);
   }else if(currentMode==='sign' && signatureData){
     const box=document.createElement('div'); box.className='draggable resizable';
-    box.dataset.sig = '1'; // marker
+    box.dataset.sig = '1';
     Object.assign(box.style,{left:x+'px', top:y+'px', width:'180px', height:'80px'});
     const img=new Image(); img.src=signatureData; box.appendChild(img);
     ov.appendChild(box); bindDrag(box); bindPinchResize(box);
@@ -408,7 +424,7 @@ function placeAt(clientX, clientY, targetEl){
   scheduleSave();
 }
 
-/* ---------- drag with text edit threshold ---------- */
+/* ---------- drag (with text edit threshold) ---------- */
 function bindDrag(el){
   const isText = el.classList.contains('text-anno');
   let dragging=false, started=false, wrap=null, parent=null;
@@ -447,7 +463,7 @@ function bindDrag(el){
 
     const dx=cx-d0x, dy=cy-d0y, dist=Math.hypot(dx,dy);
     if(isText && !dragging){
-      if(dist<DRAG_THRESHOLD) return;   // tap to edit
+      if(dist<DRAG_THRESHOLD) return;
       dragging=true; ev.preventDefault?.(); pushUndo(wrap); el.blur?.();
     }else if(!isText && !dragging){
       dragging=true; ev.preventDefault?.(); pushUndo(wrap);
@@ -479,7 +495,7 @@ function bindDrag(el){
   el.addEventListener('touchstart',  onDown, {passive:false});
 }
 
-/* ---------- pinch resize with stage pinch lock ---------- */
+/* ---------- pinch resize (stamps/signatures) ---------- */
 let pinchLock = false;
 function bindPinchResize(box){
   box.addEventListener('touchstart', (e)=>{
@@ -511,7 +527,7 @@ function bindPinchResize(box){
 }
 function touchDist(a,b){ const dx=a.clientX-b.clientX, dy=a.clientY-b.clientY; return Math.hypot(dx,dy); }
 
-/* ---------- desktop zoom & mobile gestures ---------- */
+/* ---------- gestures ---------- */
 pdfStage.addEventListener('wheel',(e)=>{
   if(e.ctrlKey || e.metaKey){
     e.preventDefault();
@@ -553,13 +569,22 @@ function openSettings(){
   fontSel.value = TEXT_DEFAULTS.font; refreshPreview();
   settingsModal.classList.add('active');
 }
-sizeInput.addEventListener('input', ()=>{ TEXT_DEFAULTS.size=+sizeInput.value; sizeVal.textContent=sizeInput.value+' px'; refreshPreview(); scheduleSave(); });
-fontSel.addEventListener('change', ()=>{ TEXT_DEFAULTS.font=fontSel.value; refreshPreview(); scheduleSave(); });
+sizeInput.addEventListener('input', ()=>{
+  TEXT_DEFAULTS.size=+sizeInput.value; sizeVal.textContent=sizeInput.value+' px'; refreshPreview();
+  // Update preview only; existing items get updated via Apply button
+});
+fontSel.addEventListener('change', ()=>{
+  TEXT_DEFAULTS.font=fontSel.value; refreshPreview();
+});
 document.getElementById('set-apply-all').addEventListener('click', ()=>{
   let count=0;
   document.querySelectorAll('.text-anno').forEach(el=>{
-    el.style.fontSize = TEXT_DEFAULTS.size + 'px';
+    el.dataset.basePx = String(TEXT_DEFAULTS.size);
     el.style.fontFamily = TEXT_DEFAULTS.font;
+    // re-normalize to display
+    const wrap = el.closest('.page-wrap');
+    const ds = displayScaleFor(wrap) || 1;
+    el.style.fontSize = (TEXT_DEFAULTS.size / ds) + 'px';
     count++;
   });
   scheduleSave(); toast(`Applied to ${count} text item${count===1?'':'s'}`);
@@ -635,9 +660,13 @@ async function savePdf(){
         if(img){ ctx.drawImage(img,x,y,w,h); continue; }
 
         if(el.classList.contains('text-anno')){
-          const cs=getComputedStyle(el); const fz=parseInt(cs.fontSize)||16;
-          ctx.font=fz+'px '+(cs.fontFamily||'Arial'); ctx.fillStyle=cs.color||'#000'; ctx.textBaseline='top';
-          ctx.fillText(el.textContent||'', x, y); continue;
+          const base = parseFloat(el.dataset.basePx) || parseInt(getComputedStyle(el).fontSize) || TEXT_DEFAULTS.size;
+          const fam  = getComputedStyle(el).fontFamily || TEXT_DEFAULTS.font;
+          ctx.font = base + 'px ' + fam;         // use base (normalized) size for accurate export
+          ctx.fillStyle = getComputedStyle(el).color || '#000';
+          ctx.textBaseline = 'top';
+          ctx.fillText(el.textContent||'', x, y);
+          continue;
         }
         if(el.tagName?.toLowerCase()==='svg'){ await drawSvgToCtx(el, ctx, x, y, w||24, h||24); continue; }
         const childSvg = el.querySelector && el.querySelector('svg');
@@ -681,7 +710,6 @@ async function savePdf(){
 }
 
 /* ====================== Session Store / Autosave ====================== */
-/* IndexedDB helpers */
 const DB_NAME='TurboSignDB', DB_VER=1, STORE='sessions';
 function idbOpen(){
   return new Promise((res,rej)=>{
@@ -708,19 +736,14 @@ async function idbGet(id){
     req.onerror=()=>rej(req.error||new Error('get error'));
   });
 }
-
-/* Hash (first 8 hex) */
 async function sha8(buf){
   if(crypto?.subtle?.digest){
     const h=await crypto.subtle.digest('SHA-256', buf);
     const v=new Uint8Array(h); let s=''; for(let i=0;i<4;i++){ s+=v[i].toString(16).padStart(2,'0'); } return s;
   }
-  // Fallback: size+simple checksum
   let sum=0; const v=new Uint8Array(buf); for(let i=0;i<v.length;i+=4096){ sum=(sum+v[i])&0xffffffff; }
   return ('sz'+v.length+'x'+(sum>>>0).toString(16)).slice(0,8);
 }
-
-/* Snapshot current state */
 function snapshotState(){
   if(!__TS_DOC__) return null;
   const pages=[...pdfContainer.children].map((wrap,idx)=>{
@@ -732,7 +755,7 @@ function snapshotState(){
       if(el.classList.contains('text-anno')){
         const cs=getComputedStyle(el);
         return { kind:'text', x:norm.x, y:norm.y, w:norm.w, h:norm.h, text: el.textContent||'',
-                 font: cs.fontFamily||TEXT_DEFAULTS.font, size: parseInt(cs.fontSize)||TEXT_DEFAULTS.size, color: cs.color||'#000' };
+                 font: cs.fontFamily||TEXT_DEFAULTS.font, size: parseFloat(el.dataset.basePx)||parseInt(cs.fontSize)||TEXT_DEFAULTS.size, color: cs.color||'#000' };
       }
       if(el.dataset.sig==='1'){
         const img=el.querySelector('img');
@@ -752,8 +775,6 @@ function snapshotState(){
     pages
   };
 }
-
-/* Restore into current render */
 async function restoreState(session){
   if(!session || !session.pages) return;
   const wraps=[...pdfContainer.children];
@@ -769,9 +790,9 @@ async function restoreState(session){
       if(it.kind==='text'){
         const d=document.createElement('div');
         d.className='draggable text-anno'; d.contentEditable=true; d.textContent=it.text||'';
+        d.dataset.basePx = String(it.size||TEXT_DEFAULTS.size);
         Object.assign(d.style,{ left:x+'px', top:y+'px', width:w+'px', height:h+'px',
-          fontSize:(it.size||TEXT_DEFAULTS.size)+'px', fontFamily:(it.font||TEXT_DEFAULTS.font), color:(it.color||'#000') });
-        d.addEventListener('input', scheduleSave); d.addEventListener('blur', scheduleSave);
+          fontFamily:(it.font||TEXT_DEFAULTS.font), color:(it.color||'#000') });
         ov.appendChild(d); bindDrag(d);
       }else if(it.kind==='sign'){
         const box=document.createElement('div'); box.className='draggable resizable'; box.dataset.sig='1';
@@ -786,41 +807,25 @@ async function restoreState(session){
         ov.appendChild(box); bindDrag(box); bindPinchResize(box);
       }
     });
+    // after items are present, normalize text sizes to display
+    applyDisplayScaleToTexts(wrap);
   });
   zoom=session.zoom||1; panX=session.panX||0; panY=session.panY||0; applyTransform();
 }
-
-/* Throttled autosave */
 let saveTimer=null, saveBusy=false;
-function scheduleSave(){
-  if(!__TS_DOC__) return;
-  if(saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(doAutosave, 300);
-}
+function scheduleSave(){ if(!__TS_DOC__) return; if(saveTimer) clearTimeout(saveTimer); saveTimer=setTimeout(doAutosave,300); }
 async function doAutosave(){
-  if(saveBusy||!__TS_DOC__) return;
-  saveBusy=true;
+  if(saveBusy||!__TS_DOC__) return; saveBusy=true;
   try{
     const snap = snapshotState(); if(!snap) return;
-    // store PDF bytes only once per session (first time)
-    const id = snap.id;
-    const payload = Object.assign({}, snap);
-    // put session metadata/state
-    await idbPut(payload);
-    // remember last session pointer
-    localStorage.setItem('ts:last', id);
-    // also stash PDF bytes blob under `${id}:pdf` if not present or size mismatch
-    const db=await idbOpen();
-    const tx=db.transaction(STORE,'readwrite');
-    const store=tx.objectStore(STORE);
-    store.put({ id: id + ':pdf', data: __TS_DOC__.bytes, name: __TS_DOC__.name, hash: __TS_DOC__.hash });
+    await idbPut(snap);
+    localStorage.setItem('ts:last', snap.id);
+    const db=await idbOpen(); const tx=db.transaction(STORE,'readwrite'); const store=tx.objectStore(STORE);
+    store.put({ id: snap.id + ':pdf', data: __TS_DOC__.bytes, name: __TS_DOC__.name, hash: __TS_DOC__.hash });
     await new Promise((r,_)=>{ tx.oncomplete=r; });
-    // toast('Saved', 'ok', 900); // quiet save; uncomment for debug
   }catch(e){ console.warn('[autosave]', e); }
   finally{ saveBusy=false; }
 }
-
-/* Try restore after opening a PDF */
 async function tryRestorePrompt(){
   if(!__TS_DOC__) return;
   const id = `ts:${__TS_DOC__.name}:${__TS_DOC__.hash}`;
@@ -830,21 +835,15 @@ async function tryRestorePrompt(){
     toast('Restored session');
   }
 }
-
-/* Restore on app load if no PDF chosen yet (uses last session) */
 window.addEventListener('DOMContentLoaded', async ()=>{
-  const last = localStorage.getItem('ts:last');
-  if(!last) return;
+  const last = localStorage.getItem('ts:last'); if(!last) return;
   try{
-    const session = await idbGet(last);
-    if(!session) return;
-    const db=await idbOpen();
-    const tx=db.transaction(STORE,'readonly');
-    const pdfRecReq = tx.objectStore(STORE).get(last + ':pdf');
+    const session = await idbGet(last); if(!session) return;
+    const db=await idbOpen(); const tx=db.transaction(STORE,'readonly');
+    const req = tx.objectStore(STORE).get(last + ':pdf');
     await new Promise((r,_)=>{ tx.oncomplete=r; tx.onerror=r; });
-    const rec = pdfRecReq.result;
+    const rec=req.result;
     if(rec?.data){
-      // preload this PDF silently and ask to restore
       await ensurePdfEngine();
       await openAndRender(rec.data);
       __TS_DOC__ = { name: session.name, hash: session.hash, bytes: rec.data };
@@ -854,15 +853,19 @@ window.addEventListener('DOMContentLoaded', async ()=>{
         await restoreState(session); toast('Restored previous document');
       }
     }
-  }catch(e){ /* ignore */ }
+  }catch(e){}
 });
-
-/* Save on tab close (best effort) */
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') doAutosave(); });
 window.addEventListener('beforeunload', ()=>{ doAutosave(); });
 
-/* Utilities */
-function restoreOverlay(w,html){ const ov=overlayOf(w); ov.innerHTML=html||''; ov.querySelectorAll('.draggable').forEach(el=>{ bindDrag(el); if(el.classList.contains('icon-anno')||el.dataset.sig==='1') bindPinchResize(el); el.querySelector?.('.text-anno')?.addEventListener?.('input', scheduleSave); }); }
+function restoreOverlay(w,html){
+  const ov=overlayOf(w); ov.innerHTML=html||'';
+  ov.querySelectorAll('.draggable').forEach(el=>{
+    bindDrag(el);
+    if(el.classList.contains('icon-anno')||el.dataset.sig==='1') bindPinchResize(el);
+  });
+  applyDisplayScaleToTexts(w);
+}
 </script>
 </body>
 </html>
