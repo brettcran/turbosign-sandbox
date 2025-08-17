@@ -317,13 +317,27 @@ document.getElementById('stamp-modal').addEventListener('click',(e)=>{
 });
 
 /* Placement */
-pdfContainer.addEventListener('dblclick', (e)=> placeAt(e.clientX, e.clientY, e.target));
-let lastTap=0;
-pdfContainer.addEventListener('touchend',(e)=>{
-  const now=Date.now();
-  if(now-lastTap<300){ const t=e.changedTouches[0]; const tgt=document.elementFromPoint(t.clientX,t.clientY); placeAt(t.clientX,t.clientY,tgt); e.preventDefault(); }
-  lastTap=now;
-},{passive:false});
+// Desktop double-click
+pdfStage.addEventListener('dblclick', (e)=> placeAt(e.clientX, e.clientY, e.target));
+
+// Mobile double-tap (pointer-based, resilient to transforms and overlay)
+// If double-tap detection fails on a device, single tap will also place when armed.
+let __ts_lastTap=0, __ts_lastX=0, __ts_lastY=0;
+pdfStage.addEventListener('pointerup', (e)=>{
+  if(pinchLock) return;
+  if(e.pointerType !== 'touch') return;
+  const now = performance.now();
+  const dt = now - __ts_lastTap;
+  const cx = e.clientX, cy = e.clientY;
+  const dist = Math.hypot(cx-__ts_lastX, cy-__ts_lastY);
+  const isDouble = dt < 350 && dist < 18;
+  const tgt = document.elementFromPoint(cx, cy);
+  if(isDouble) { placeAt(cx, cy, tgt); e.preventDefault(); }
+  else if(currentMode){ // graceful single-tap fallback when armed
+    placeAt(cx, cy, tgt); e.preventDefault();
+  }
+  __ts_lastTap = now; __ts_lastX = cx; __ts_lastY = cy;
+}, {passive:false});
 
 function displayScaleFor(wrap){
   const canvas=wrap?.querySelector('canvas.pdfpage'); if(!canvas) return 1;
