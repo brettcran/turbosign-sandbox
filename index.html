@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>TurboSign 3.3 — PDF Annotator</title>
+<title>TurboSign 3.3.4 — PDF Annotator</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <style>
   :root{
@@ -14,7 +14,7 @@
   html,body{height:100%}
   body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg)}
 
-  /* Toolbar — centered; scrolls horizontally on narrow screens */
+  /* Toolbar */
   #toolbar{
     position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
     display:flex; gap:10px; padding:10px; border-radius:28px; z-index:40;
@@ -32,20 +32,18 @@
   .btn svg{ width:22px; height:22px; stroke:var(--icon) }
   @media (max-width:480px){ .btn{ width:46px; height:46px } .btn svg{ width:20px; height:20px } }
 
+  /* Pages & overlay */
   #pdf-container{ position:relative; min-height:60vh; padding-bottom:110px }
   .page-wrap{ position:relative; width:max(320px, 72vw); margin:28px auto; transform-origin:0 0 }
   canvas.pdfpage{ display:block; width:100%; height:auto; background:var(--canvas-bg); border-radius:6px; touch-action:none }
   .overlay{ position:absolute; inset:0; }
   .draggable{ position:absolute; cursor:move; user-select:none; color:#000; touch-action:none }
-  .text-anno{
-    font:16px Arial, sans-serif;
-    color:#000; padding:2px 4px; background:transparent; min-width:10px; min-height:16px;
-    cursor:text;
-  }
-  .icon-anno svg{ width:26px; height:26px; }
+  .text-anno{ font:16px Arial, sans-serif; color:#000; padding:2px 4px; background:transparent; min-width:10px; min-height:16px; cursor:text }
+  .icon-anno svg{ width:26px; height:26px }
   .resizable{ border:1px dashed #9aa; background:transparent; resize:both; overflow:hidden }
   .resizable img{ width:100%; height:100%; display:block }
 
+  /* Modals */
   .modal{
     display:none; position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
     z-index:50; background:rgba(20,24,32,.94); color:var(--fg);
@@ -57,9 +55,8 @@
   .row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center }
   .chip{ appearance:none; border:1px solid var(--border); background:var(--btn); color:var(--icon); border-radius:10px; padding:8px 10px; display:inline-flex; gap:8px; align-items:center; cursor:pointer }
   .chip svg{ width:18px; height:18px }
-  .kbd{ font:12px/1.8 ui-monospace,Menlo,Consolas,monospace; background:#1f2937; color:#dbeafe; padding:0 6px; border-radius:6px; border:1px solid #334155 }
-  .help p{ margin:.4rem 0 } .help li{ margin:.25rem 0 }
 
+  /* Toast */
   #toast{ position:fixed; top:12px; left:50%; transform:translateX(-50%);
     background:#0b1020d0; color:#eaf2ff; padding:8px 12px; border-radius:10px;
     border:1px solid rgba(255,255,255,.18); z-index:60; font-size:13px; display:none }
@@ -69,10 +66,8 @@
 </style>
 </head>
 <body>
-  <!-- Hidden input -->
   <input id="file-input" type="file" accept="application/pdf,.pdf" style="display:none" />
 
-  <!-- Toolbar -->
   <div id="toolbar" aria-label="Tools">
     <button class="btn" data-act="open" title="Open PDF"><i data-feather="folder"></i></button>
     <button class="btn" data-act="text" title="Text"><i data-feather="type"></i></button>
@@ -124,14 +119,13 @@
   </div>
 
   <!-- Help -->
-  <div id="help-modal" class="modal help">
+  <div id="help-modal" class="modal">
     <h3>How to use TurboSign</h3>
-    <p><b>Open:</b> tap the folder icon and choose a PDF.</p>
     <ul>
-      <li><b>Place:</b> choose Text / Stamp / Signature, then <b>double-tap</b> (or double-click) on the page.</li>
-      <li><b>Move:</b> drag any item. <b>Resize signatures & stamps</b> by <b>pinch</b> (phones) or <b>Alt + mouse-wheel</b> (desktop). Text size: focus then <b>Ctrl/Cmd + “+ / −”</b> or <b>Alt + wheel</b>.</li>
-      <li><b>Zoom:</b> use toolbar +/−. Annotations scale with the page.</li>
-      <li><b>Undo/Redo:</b> toolbar arrows.</li>
+      <li><b>Open:</b> folder icon → choose a PDF.</li>
+      <li><b>Place:</b> choose Text / Stamp / Signature, then <b>double-tap</b> (or double-click).</li>
+      <li><b>Move:</b> drag any item. <b>Resize signatures & stamps</b> by <b>pinch</b> (phones) or <b>Alt + wheel</b> (desktop). Text: focus then <b>Ctrl/Cmd + “+ / −”</b>.</li>
+      <li><b>Zoom:</b> use +/− in the toolbar.</li>
       <li><b>Save:</b> flattens everything into a new PDF. On iOS, Share → <b>Save to Files</b>.</li>
     </ul>
     <div class="row" style="margin-top:8px"><button class="chip" id="help-close"><i data-feather="x-circle"></i> Close</button></div>
@@ -171,15 +165,16 @@
 
   <div id="toast"></div>
 
-  <!-- Libs -->
-  <!-- Load Feather first; it’s small and harmless if re-run -->
+  <!-- Icons first -->
   <script src="https://unpkg.com/feather-icons@4.29.2/dist/feather.min.js"></script>
 
-  <!-- Try local PDF.js first (works if you place these files in repo root).
-       If not present, CDN script will provide pdfjsLib. -->
+  <!-- PDF.js: local (if present) + CDN fallback -->
   <script src="pdf.min.js"></script>
-  <!-- CDN fallback (if local missing). Safe to include both; first one that defines pdfjsLib wins. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- Worker hint (helps some setups). If blocked, we auto-fallback to disableWorker anyway. -->
+  <script>
+    window.__PDFJS_WORKER__ = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  </script>
 
   <!-- PDF-LIB -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -191,19 +186,7 @@ document.addEventListener('DOMContentLoaded', ()=> drawFeather(document));
 
 /* ---------- toast ---------- */
 const toastEl=document.getElementById('toast');
-function toast(msg,type='ok',ms=1600){ toastEl.textContent=msg; toastEl.className=''; toastEl.classList.add('show',type); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove('show'),ms); }
-
-/* ---------- PDF.js bootstrap (robust) ---------- */
-(function setupPdfJs(){
-  if(!window.pdfjsLib){
-    console.warn('pdfjsLib not found yet. If local pdf.min.js is missing, CDN should provide it.');
-  }
-  // Worker is optional; we’ll fall back to disableWorker if it fails.
-  if(window.pdfjsLib){
-    // Prefer local worker if you have it in the repo root; else it’s fine—render will fall back.
-    try{ pdfjsLib.GlobalWorkerOptions.workerSrc = "pdf.worker.min.js"; }catch(_){}
-  }
-})();
+function toast(msg,type='ok',ms=1800){ toastEl.textContent=msg; toastEl.className=''; toastEl.classList.add('show',type); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove('show'),ms); }
 
 /* ---------- elements & state ---------- */
 const fileInput = document.getElementById('file-input');
@@ -213,12 +196,8 @@ const signModal = document.getElementById('sign-modal');
 const helpModal = document.getElementById('help-modal');
 const settingsModal = document.getElementById('settings-modal');
 
-let currentMode=null;        // 'text' | 'stamp-check' | 'stamp-x' | 'stamp-square' | 'sign'
-let signatureData=null;      // dataURL
-let activeWrap=null;
-let openedFileName=null;
-let zoom=1;                  // CSS zoom scale (applied to .page-wrap)
-const ZMIN=.6, ZMAX=2.5, ZSTEP=0.15;
+let currentMode=null, signatureData=null, activeWrap=null, openedFileName=null;
+let zoom=1; const ZMIN=.6, ZMAX=2.5, ZSTEP=0.15;
 
 /* ---------- text defaults ---------- */
 const TEXT_DEFAULTS = { size: 16, font: "Arial, sans-serif" };
@@ -226,8 +205,8 @@ const sizeInput = document.getElementById('set-text-size');
 const sizeVal   = document.getElementById('set-size-val');
 const fontSel   = document.getElementById('set-text-font');
 const previewEl = document.getElementById('set-preview');
-function refreshPreview(){ previewEl.style.fontSize = (sizeInput?.value||16)+'px'; previewEl.style.fontFamily = (fontSel?.value||TEXT_DEFAULTS.font); }
-sizeInput.value = TEXT_DEFAULTS.size; sizeVal.textContent = TEXT_DEFAULTS.size+' px'; fontSel.value = TEXT_DEFAULTS.font; refreshPreview();
+function refreshPreview(){ if(!previewEl) return; previewEl.style.fontSize=(sizeInput?.value||16)+'px'; previewEl.style.fontFamily=(fontSel?.value||TEXT_DEFAULTS.font); }
+sizeInput.value=TEXT_DEFAULTS.size; sizeVal.textContent=TEXT_DEFAULTS.size+' px'; fontSel.value=TEXT_DEFAULTS.font; refreshPreview();
 
 /* ---------- history ---------- */
 const historyMap=new Map(); const HMAX=60;
@@ -253,39 +232,129 @@ document.getElementById('toolbar').addEventListener('click', (e)=>{
   else if(act==='save'){ savePdf(); }
 });
 
-/* ---------- open & render ---------- */
-fileInput.addEventListener('change', async (e)=>{
-  const file=e.target.files[0]; if(!file){return;}
-  if(file.type!=='application/pdf'){ alert('Please choose a PDF'); return; }
-  openedFileName=file.name.replace(/\.[Pp][Dd][Ff]$/,'');
+/* ---------- PDF.js bootstrap + engine check ---------- */
+function pdfjsAvailable(){ return !!window.pdfjsLib; }
+async function ensurePdfEngine(){
+  if(!pdfjsAvailable()){
+    // Give scripts time to load (CDN fallback) before we declare missing.
+    await new Promise(r=>setTimeout(r, 200));
+  }
+  if(!pdfjsAvailable()){
+    throw newErr('E_ENGINE_MISSING', 'PDF engine failed to load (pdfjsLib is undefined). Check network/AdBlock/CSP.');
+  }
   try{
-    await renderPdf(await file.arrayBuffer());
+    // Prefer a working CDN worker; if blocked we will fallback to disableWorker later.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = (window.__PDFJS_WORKER__ || "pdf.worker.min.js");
+  }catch(e){}
+}
+
+/* ---------- robust error builder & logger ---------- */
+function newErr(code, message, cause){
+  const e = new Error(message);
+  e.code = code; if(cause) e.cause = cause;
+  return e;
+}
+function errString(err){
+  try{
+    if(!err) return '(no error value)';
+    if(err instanceof Error){
+      return `[${err.code||err.name}] ${err.message}${err.stack?'\n'+err.stack:''}`;
+    }
+    if(typeof err === 'object') return JSON.stringify(err, Object.getOwnPropertyNames(err));
+    return String(err);
+  }catch(_){ return '(unprintable error)'; }
+}
+function logError(prefix, err){
+  console.groupCollapsed(prefix);
+  console.error(err);
+  try{
+    const obj = (err && typeof err==='object') ? err : { value: err };
+    console.table({
+      code: obj.code||'(n/a)',
+      name: obj.name||'(n/a)',
+      message: obj.message||'(n/a)'
+    });
+    if(obj.stack) console.log('stack:', obj.stack);
+  }catch(_){}
+  console.groupEnd();
+}
+
+/* ---------- open & render with bulletproof diagnostics ---------- */
+fileInput.addEventListener('change', async (e)=>{
+  const f=e.target.files?.[0]; if(!f){ return; }
+
+  // Accept PDFs even when type is empty (iOS) by checking extension.
+  const name=f.name||''; const extOk=/\.pdf$/i.test(name); const typeOk=(f.type==='application/pdf');
+  if(!(extOk||typeOk)){ const msg='Selected file is not a PDF'; toast(msg,'err'); logError('[Open PDF] Non-PDF', {name, type:f.type}); return; }
+  if(f.size===0){ const msg='PDF file is empty (0 bytes)'; toast(msg,'err'); logError('[Open PDF] Empty file', {name}); return; }
+
+  openedFileName=name.replace(/\.[Pp][Dd][Ff]$/,'') || 'document';
+
+  try{
+    await ensurePdfEngine();
+    const buf=await f.arrayBuffer();
+    await openAndRender(buf);
     toast('PDF loaded');
   }catch(err){
-    console.error(err); toast('Failed to open PDF','err',2200);
+    const msg = humanOpenError(err);
+    toast(msg,'err',2800);
+    logError('[Open PDF] Error detail', err);
   }
 });
 
-function requirePdfJs(){
-  if(!window.pdfjsLib){
-    toast('PDF.js not available', 'err', 2200);
-    throw new Error('PDF.js not available (pdfjsLib is undefined). Ensure pdf.min.js/CDN loaded.');
+function humanOpenError(err){
+  const s = errString(err);
+  if(/Password|Incorrect Password|NEED_PASSWORD/i.test(s)) return 'Password required or incorrect';
+  if(/InvalidPDF|FormatError/i.test(s)) return 'Invalid or corrupted PDF';
+  if(/MissingPDF/i.test(s)) return 'PDF missing or unreadable';
+  if(/ENGINE_MISSING|pdfjsLib is undefined/i.test(s)) return 'PDF engine failed to load';
+  if(/Worker|importScripts|Blocked|NetworkError|SecurityError/i.test(s)) return 'Worker blocked — retried on main thread and failed';
+  return 'Failed to open PDF';
+}
+
+async function openAndRender(bytes){
+  await ensurePdfEngine();
+  // try with worker first
+  try{
+    const pdf = await tryOpen(bytes, {disableWorker:false});
+    return renderPdf(pdf);
+  }catch(e1){
+    // Password?
+    if(isPasswordError(e1)){
+      const pw = prompt('Enter PDF password:');
+      if(pw===null) throw newErr('E_PW_CANCEL','Password entry canceled', e1);
+      try{
+        const pdf = await tryOpen(bytes, {disableWorker:false, password:pw});
+        return renderPdf(pdf);
+      }catch(e1b){
+        // fallback to main thread with same password
+        try{
+          const pdf = await tryOpen(bytes, {disableWorker:true, password:pw});
+          return renderPdf(pdf);
+        }catch(e1c){ throw e1c; }
+      }
+    }
+    // Not password: fallback to main thread
+    try{
+      const pdf = await tryOpen(bytes, {disableWorker:true});
+      return renderPdf(pdf);
+    }catch(e2){ throw e2; }
   }
 }
 
-async function renderPdf(bytes){
-  requirePdfJs();
-  pdfContainer.innerHTML='';
-  let pdf;
-  try{
-    // Try with worker
-    pdf = await pdfjsLib.getDocument({data:bytes, disableWorker:false}).promise;
-  }catch(_err1){
-    console.warn('Worker render failed or blocked; switching to main thread.', _err1);
-    // Fallback without worker (always works on GitHub Pages)
-    pdf = await pdfjsLib.getDocument({data:bytes, disableWorker:true}).promise;
-  }
+function isPasswordError(err){
+  const s = errString(err);
+  return /Password|Incorrect Password|NEED_PASSWORD/i.test(s);
+}
 
+async function tryOpen(bytes, opts){
+  const params = { data: bytes, disableWorker: !!opts.disableWorker };
+  if(opts.password) params.password = opts.password;
+  return pdfjsLib.getDocument(params).promise;
+}
+
+async function renderPdf(pdf){
+  pdfContainer.innerHTML='';
   for(let i=1;i<=pdf.numPages;i++){
     const page=await pdf.getPage(i);
     const vp=page.getViewport({scale:1.15});
@@ -310,11 +379,9 @@ function makeStampSvg(name, size=26){
   svg.setAttribute('stroke-width','2');
   svg.setAttribute('stroke-linecap','round');
   svg.setAttribute('stroke-linejoin','round');
-
-  const path = (d)=>{ const p=document.createElementNS(NS,'path'); p.setAttribute('d', d); return p; };
-  const circle = (r=10)=>{ const c=document.createElementNS(NS,'circle'); c.setAttribute('cx','12'); c.setAttribute('cy','12'); c.setAttribute('r',String(r)); return c; };
-  const rect = ()=>{ const r=document.createElementNS(NS,'rect'); r.setAttribute('x','3'); r.setAttribute('y','3'); r.setAttribute('width','18'); r.setAttribute('height','18'); r.setAttribute('rx','2'); r.setAttribute('ry','2'); return r; };
-
+  const path=(d)=>{const p=document.createElementNS(NS,'path'); p.setAttribute('d',d); return p;};
+  const circle=(r=10)=>{const c=document.createElementNS(NS,'circle'); c.setAttribute('cx','12'); c.setAttribute('cy','12'); c.setAttribute('r',String(r)); return c;};
+  const rect=()=>{const r=document.createElementNS(NS,'rect'); r.setAttribute('x','3'); r.setAttribute('y','3'); r.setAttribute('width','18'); r.setAttribute('height','18'); r.setAttribute('rx','2'); r.setAttribute('ry','2'); return r;};
   if(name==='check-circle'){ svg.append(circle()); svg.append(path('M9 12l2 2 4-4')); }
   else if(name==='x'){ svg.append(path('M18 6L6 18')); svg.append(path('M6 6L18 18')); }
   else { svg.append(rect()); }
@@ -325,6 +392,7 @@ function makeStampSvg(name, size=26){
 stampModal.addEventListener('click',(e)=>{
   const chip=e.target.closest('[data-stamp]'); if(!chip) return;
   const st=chip.dataset.stamp; currentMode='stamp-'+st; stampModal.classList.remove('active');
+  drawFeather(stampModal);
   toast('Double-tap to place '+(st==='check'?'✓':st==='x'?'✕':'box'));
 });
 
@@ -353,22 +421,17 @@ function placeAt(clientX, clientY, targetEl){
   if(currentMode==='text'){
     const d=document.createElement('div');
     d.className='draggable text-anno'; d.contentEditable=true; d.textContent='Text';
-    Object.assign(d.style,{
-      left:x+'px', top:y+'px',
-      fontSize: TEXT_DEFAULTS.size + 'px',
-      fontFamily: TEXT_DEFAULTS.font
-    });
+    Object.assign(d.style,{ left:x+'px', top:y+'px', fontSize:TEXT_DEFAULTS.size+'px', fontFamily:TEXT_DEFAULTS.font });
     ov.appendChild(d); bindDrag(d);
   }else if(currentMode.startsWith('stamp-')){
     const nm=currentMode.split('-')[1];
-    const icon = (nm==='check') ? 'check-circle' : (nm==='x' ? 'x' : 'square');
+    const icon=(nm==='check')?'check-circle':(nm==='x'?'x':'square');
 
     const box=document.createElement('div');
     box.className='draggable icon-anno';
     Object.assign(box.style,{left:x+'px', top:y+'px', position:'absolute', width:'26px', height:'26px'});
 
-    const svg = makeStampSvg(icon, 26);
-    svg.style.width='100%'; svg.style.height='100%';
+    const svg=makeStampSvg(icon,26); svg.style.width='100%'; svg.style.height='100%';
     box.appendChild(svg);
 
     ov.appendChild(box);
@@ -384,7 +447,7 @@ function placeAt(clientX, clientY, targetEl){
   currentMode=null;
 }
 
-/* ---------- drag with text edit threshold (pointer/mouse/touch) ---------- */
+/* ---------- drag with text edit threshold ---------- */
 function bindDrag(el){
   const isText = el.classList.contains('text-anno');
   let dragging=false, started=false, wrap=null, parent=null;
@@ -392,10 +455,8 @@ function bindDrag(el){
   const DRAG_THRESHOLD=6;
 
   const onDown=(ev)=>{
-    // If multi-touch start (pinch), do not start drag here — allow pinch handler.
-    if(ev.touches && ev.touches.length>1) return;
-
-    if(!isText) ev.preventDefault?.(); // text needs the tap to focus
+    if(ev.touches && ev.touches.length>1) return; // allow pinch
+    if(!isText) ev.preventDefault?.();
     started=true;
     wrap = el.closest('.page-wrap');
     parent = el.offsetParent || el.closest('.overlay') || wrap;
@@ -403,7 +464,6 @@ function bindDrag(el){
 
     const scale=getWrapScale(wrap);
     const pRect=parent.getBoundingClientRect();
-
     const cx=('clientX' in ev)?ev.clientX:(ev.touches&&ev.touches[0]?ev.touches[0].clientX:0);
     const cy=('clientY' in ev)?ev.clientY:(ev.touches&&ev.touches[0]?ev.touches[0].clientY:0);
 
@@ -421,20 +481,16 @@ function bindDrag(el){
 
   const onMove=(ev)=>{
     if(!started) return;
-
     const cx=('clientX' in ev)?ev.clientX:(ev.touches&&ev.touches[0]?ev.touches[0].clientX:0);
     const cy=('clientY' in ev)?ev.clientY:(ev.touches&&ev.touches[0]?ev.touches[0].clientY:0);
 
     const dx=cx-d0x, dy=cy-d0y, dist=Math.hypot(dx,dy);
-
     if(isText && !dragging){
       if(dist<DRAG_THRESHOLD) return;   // tap to edit
       dragging=true; ev.preventDefault?.(); pushUndo(wrap); el.blur?.();
     }else if(!isText && !dragging){
       dragging=true; ev.preventDefault?.(); pushUndo(wrap);
-    }else{
-      ev.preventDefault?.();
-    }
+    }else{ ev.preventDefault?.(); }
 
     const scale=getWrapScale(wrap);
     const pRect=parent.getBoundingClientRect();
@@ -456,9 +512,7 @@ function bindDrag(el){
   };
 
   const onUp=(ev)=>{
-    if(isText && !dragging){
-      setTimeout(()=>{ try{ el.focus(); }catch{} }, 0);
-    }
+    if(isText && !dragging){ setTimeout(()=>{ try{ el.focus(); }catch{} }, 0); }
     cleanup();
   };
 
@@ -509,7 +563,7 @@ document.addEventListener('wheel', (e)=>{
 
 /* ---------- text size via keyboard (focused) ---------- */
 document.addEventListener('keydown', (e)=>{
-  const t = document.activeElement;
+  const t=document.activeElement;
   if(!t || !t.classList?.contains('text-anno')) return;
   if(!(e.ctrlKey||e.metaKey)) return;
   if(e.key==='=' || e.key==='+'){ e.preventDefault(); bumpTextSize(t, +1.5); }
@@ -547,12 +601,9 @@ document.getElementById('help-close').addEventListener('click',()=> helpModal.cl
 });
 
 /* ---------- zoom ---------- */
-function setZoom(z){
-  zoom=Math.min(ZMAX, Math.max(ZMIN, z));
-  document.querySelectorAll('.page-wrap').forEach(w=> w.style.transform=`scale(${zoom})`);
-}
+function setZoom(z){ zoom=Math.min(ZMAX, Math.max(ZMIN, z)); document.querySelectorAll('.page-wrap').forEach(w=> w.style.transform=`scale(${zoom})`); }
 
-/* ---------- signature pad (Pointer Events) ---------- */
+/* ---------- signature pad ---------- */
 const spView=document.getElementById('sp-view'), spCtx=spView.getContext('2d');
 const spColor=document.getElementById('sp-color'), spSize=document.getElementById('sp-size'), spSmooth=document.getElementById('sp-smooth');
 let spMode='pen', spDrawing=false, spLast=null, spUndo=[], spRedo=[], SP_MAX=80;
@@ -593,7 +644,6 @@ async function drawSvgToCtx(svg, ctx, x, y, w, h){
 async function savePdf(){
   try{
     const pdfDoc=await PDFLib.PDFDocument.create();
-
     for(const wrap of pdfContainer.children){
       const pageCanvas=wrap.querySelector('canvas.pdfpage'); if(!pageCanvas) continue;
       const page=pdfDoc.addPage([pageCanvas.width, pageCanvas.height]);
@@ -645,36 +695,52 @@ async function savePdf(){
           title: 'TurboSign PDF',
           text: 'Annotated PDF from TurboSign'
         });
-        toast('Shared to Files', 'ok');
-        return;
+        toast('Shared to Files', 'ok'); return;
       } catch(e){ /* canceled/fail -> fallback */ }
     }
-
     if (window.navigator && typeof window.navigator.msSaveOrOpenBlob === 'function') {
-      window.navigator.msSaveOrOpenBlob(blob, fname);
-      return;
+      window.navigator.msSaveOrOpenBlob(blob, fname); return;
     }
 
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = fname;
-
+    const a = document.createElement("a"); a.href = url; a.download = fname;
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (isMobile) {
-      const w = window.open(url, "_blank");
-      if (!w) { window.location.href = url; }
+      const w = window.open(url, "_blank"); if (!w) window.location.href = url;
       toast('Opened PDF — Share ▶︎ Save to Files', 'ok', 2500);
-    } else {
-      a.click();
-    }
+    } else { a.click(); }
     setTimeout(()=> URL.revokeObjectURL(url), 2000);
-  }catch(e){ console.error(e); toast('Save failed','err',2200); }
+  }catch(e){ logError('[Save PDF] Error', e); toast('Save failed','err',2200); }
 }
 
 /* ---------- keyboard zoom (desktop) ---------- */
 document.addEventListener('keydown',(e)=>{
   if(e.ctrlKey && (e.key==='='||e.key==='+')){ e.preventDefault(); setZoom(zoom+ZSTEP); }
   if(e.ctrlKey && (e.key==='-'          )){ e.preventDefault(); setZoom(zoom-ZSTEP); }
+});
+
+/* ----- Hidden diagnostics (no UI): Alt+Shift+D prints engine state; Alt+Shift+T creates a tiny test PDF ----- */
+document.addEventListener('keydown',(e)=>{
+  if(e.altKey && e.shiftKey && (e.key.toLowerCase()==='d')){
+    console.groupCollapsed('[Diagnostics]');
+    console.log('pdfjsLib:', !!window.pdfjsLib);
+    console.log('workerSrc:', (window.pdfjsLib && pdfjsLib.GlobalWorkerOptions && pdfjsLib.GlobalWorkerOptions.workerSrc) || '(unset)');
+    console.log('userAgent:', navigator.userAgent);
+    console.groupEnd();
+    toast('Diagnostics printed to console');
+  }
+  if(e.altKey && e.shiftKey && (e.key.toLowerCase()==='t')){
+    (async()=>{
+      try{
+        await ensurePdfEngine();
+        const doc = await PDFLib.PDFDocument.create();
+        const p = doc.addPage([400,300]); p.drawText('TurboSign self-test', {x:20,y:280,size:16});
+        const bytes = await doc.save();
+        await openAndRender(bytes);
+        toast('Self-test OK');
+      }catch(err){ logError('[Self-test] Error', err); toast('Self-test failed','err',2200); }
+    })();
+  }
 });
 </script>
 </body>
