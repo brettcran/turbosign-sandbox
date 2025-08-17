@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>TurboSign 3.6.2 — PDF Annotator</title>
+<title>TurboSign 3.6.3 — PDF Annotator</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <style>
   :root{
@@ -32,7 +32,7 @@
   .btn svg{ width:22px; height:22px; stroke:var(--icon) }
   @media (max-width:480px){ .btn{ width:46px; height:46px } .btn svg{ width:20px; height:20px } }
 
-  /* Stage: native vertical scroll at 1×; pan/zoom when zoom>1 */
+  /* Stage */
   #pdf-stage{
     position:relative;
     height:100vh;
@@ -89,7 +89,6 @@
     <button class="btn" data-act="text" title="Text"><i data-feather="type"></i></button>
     <button class="btn" data-act="stamp" title="Stamp (✓/✕/□)"><i data-feather="check-circle"></i></button>
     <button class="btn" data-act="sign" title="Signature"><i data-feather="edit-2"></i></button>
-    <!-- zoom buttons removed -->
     <button class="btn" data-act="undo" title="Undo"><i data-feather="rotate-ccw"></i></button>
     <button class="btn" data-act="redo" title="Redo"><i data-feather="rotate-cw"></i></button>
     <button class="btn" data-act="help" title="Help"><i data-feather="help-circle"></i></button>
@@ -97,7 +96,6 @@
     <button class="btn" data-act="save" title="Save PDF"><i data-feather="download"></i></button>
   </div>
 
-  <!-- Scrollable stage -->
   <div id="pdf-stage">
     <div id="pdf-scroll">
       <div id="pdf-container"></div>
@@ -144,8 +142,8 @@
     <ul>
       <li><b>Open:</b> folder icon → choose a PDF.</li>
       <li><b>Place:</b> choose Text / Stamp / Signature, then <b>double-tap</b> (or double-click).</li>
-      <li><b>Move:</b> drag any item. <b>Resize signatures & stamps</b> by <b>pinch</b> (phones) or <b>Alt + wheel</b> (desktop). Text: focus then <b>Ctrl/Cmd + “+ / −”</b>.</li>
-      <li><b>Zoom:</b> pinch with two fingers; when zoomed in, drag one finger to pan. At 1×, the document scrolls normally.</li>
+      <li><b>Move:</b> drag any item. <b>Resize signatures & stamps</b> by <b>pinch on the item</b> (two fingers directly on it). Text: focus then <b>Ctrl/Cmd + “+ / −”</b>.</li>
+      <li><b>Zoom:</b> pinch with two fingers on the page; when zoomed in, drag one finger to pan. At 1×, the document scrolls normally.</li>
       <li><b>Save:</b> flattens everything into a new PDF. On iOS, Share → <b>Save to Files</b>.</li>
     </ul>
     <div class="row" style="margin-top:8px"><button class="chip" id="help-close"><i data-feather="x-circle"></i> Close</button></div>
@@ -226,29 +224,17 @@ function clamp(n,min,max){ return Math.min(max, Math.max(min, n)); }
 function constrainPan(){
   const vw = pdfStage.clientWidth;
   const vh = pdfStage.clientHeight;
-  const cw = pdfContainer.scrollWidth * zoom;   // natural content size × zoom
+  const cw = pdfContainer.scrollWidth * zoom;
   const ch = pdfContainer.scrollHeight * zoom;
 
-  const margin = 24;        // small padding so edges aren't glued to the border
-  const centerYPad = 20;    // slight bias downwards looks nicer
+  const margin = 24;
+  const centerYPad = 20;
 
-  // X (horizontal)
-  if (cw <= vw) {
-    panX = (vw - cw)/2;     // center if content narrower
-  } else {
-    const minX = vw - cw - margin;  // left-most allowed (content's right edge >= margin)
-    const maxX = margin;            // right-most allowed
-    panX = clamp(panX, minX, maxX);
-  }
+  if (cw <= vw) { panX = (vw - cw)/2; }
+  else { panX = clamp(panX, vw - cw - margin, margin); }
 
-  // Y (vertical)
-  if (ch <= vh) {
-    panY = Math.max(centerYPad, (vh - ch)/2);  // center with a little top offset
-  } else {
-    const minY = vh - ch - margin;
-    const maxY = margin;
-    panY = clamp(panY, minY, maxY);
-  }
+  if (ch <= vh) { panY = Math.max(centerYPad, (vh - ch)/2); }
+  else { panY = clamp(panY, vh - ch - margin, margin); }
 }
 
 function applyTransform(){
@@ -259,28 +245,20 @@ function applyTransform(){
 
 function setZoomAt(newZoom, clientX, clientY){
   newZoom = clamp(newZoom, ZMIN, ZMAX);
-
-  // pivot around the pointer/fingers
   const stageRect = pdfStage.getBoundingClientRect();
   const cx = clientX - stageRect.left;
   const cy = clientY - stageRect.top;
-
-  // world coords pre-zoom
   const wx = (cx - panX) / zoom;
   const wy = (cy - panY) / zoom;
-
-  // apply zoom keeping pivot stable
   zoom = newZoom;
   panX = cx - wx * zoom;
   panY = cy - wy * zoom;
-
   applyTransform();
 }
 
 function centerContentOnce(){
   const first = pdfContainer.querySelector('.page-wrap'); if(!first) return;
   zoom = 1;
-  // approximate centering using natural (unscaled) content measurements
   const vw = pdfStage.clientWidth;
   const vh = pdfStage.clientHeight;
   const cw = pdfContainer.scrollWidth * zoom;
@@ -322,7 +300,7 @@ document.getElementById('toolbar').addEventListener('click', (e)=>{
   else if(act==='save'){ savePdf(); }
 });
 
-/* ---------- PDF.js bootstrap + engine check ---------- */
+/* ---------- PDF.js bootstrap ---------- */
 function pdfjsAvailable(){ return !!window.pdfjsLib; }
 async function ensurePdfEngine(){
   if(!pdfjsAvailable()){ await new Promise(r=>setTimeout(r, 200)); }
@@ -372,7 +350,6 @@ async function openAndRender(bytes){
     wrap.appendChild(Object.assign(document.createElement('div'),{className:'overlay'}));
     pdfContainer.appendChild(wrap);
   }
-  // after pages render, clamps rely on correct scrollWidth/Height
   applyTransform();
 }
 
@@ -437,12 +414,12 @@ function placeAt(clientX, clientY, targetEl){
 
     ov.appendChild(box);
     bindDrag(box);
-    bindPinchResize(box);
+    bindPinchResize(box); // <-- will lock stage pinch
   }else if(currentMode==='sign' && signatureData){
     const box=document.createElement('div'); box.className='draggable resizable';
     Object.assign(box.style,{left:x+'px', top:y+'px', width:'180px', height:'80px'});
     const img=new Image(); img.src=signatureData; box.appendChild(img);
-    ov.appendChild(box); bindDrag(box); bindPinchResize(box);
+    ov.appendChild(box); bindDrag(box); bindPinchResize(box); // <-- will lock stage pinch
   }
   currentMode=null;
 }
@@ -518,30 +495,44 @@ function bindDrag(el){
   el.addEventListener('touchstart',  onDown, {passive:false});
 }
 
-/* ---------- pinch resize for signatures & stamps ---------- */
+/* ---------- pinch resize with stage pinch lock ---------- */
+let pinchLock = false; // <-- NEW: prevents stage from zooming while resizing an element
+
 function bindPinchResize(box){
   box.addEventListener('touchstart', (e)=>{
     if(e.touches.length!==2) return;
+    pinchLock = true;                 // lock stage pinch
+    e.stopPropagation();              // don't bubble to stage
     e.preventDefault();
-    const startDist=touchDist(e.touches[0], e.touches[1]);
-    const startW=box.offsetWidth, startH=box.offsetHeight;
+
+    const startDist = touchDist(e.touches[0], e.touches[1]);
+    const startW = box.offsetWidth, startH = box.offsetHeight;
+
     const move=(ev)=>{
       if(ev.touches.length!==2) return;
+      ev.stopPropagation();
       ev.preventDefault();
-      const s=touchDist(ev.touches[0],ev.touches[1])/startDist;
-      box.style.width = (startW*s)+'px';
+      const s = touchDist(ev.touches[0],ev.touches[1]) / startDist;
+      box.style.width  = (startW*s)+'px';
       box.style.height = (startH*s)+'px';
       const svg=box.querySelector('svg'); if(svg){ svg.style.width='100%'; svg.style.height='100%'; }
     };
-    const end=()=>{ document.removeEventListener('touchmove',move); document.removeEventListener('touchend',end); };
-    document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('touchend',end);
+    const end=()=>{
+      pinchLock = false;              // release lock
+      document.removeEventListener('touchmove',move);
+      document.removeEventListener('touchend',end);
+      document.removeEventListener('touchcancel',end);
+    };
+    document.addEventListener('touchmove',move,{passive:false});
+    document.addEventListener('touchend',end,{passive:false});
+    document.addEventListener('touchcancel',end,{passive:false});
   }, {passive:false});
 }
 function touchDist(a,b){ const dx=a.clientX-b.clientX, dy=a.clientY-b.clientY; return Math.hypot(dx,dy); }
 
 /* ---------- desktop zoom & mobile gestures ---------- */
 pdfStage.addEventListener('wheel',(e)=>{
-  if(e.ctrlKey || e.metaKey){ // trackpad pinch or ctrl+wheel
+  if(e.ctrlKey || e.metaKey){
     e.preventDefault();
     const factor = e.deltaY<0 ? 1.1 : 0.9;
     setZoomAt(zoom*factor, e.clientX, e.clientY);
@@ -550,6 +541,7 @@ pdfStage.addEventListener('wheel',(e)=>{
 
 let touchMode=null, startDist=0, startZoom=1, lastCX=0, lastCY=0;
 pdfStage.addEventListener('touchstart',(e)=>{
+  if(pinchLock) return;               // <-- NEW: ignore while resizing element
   if(e.touches.length===2){
     touchMode='pinch';
     startDist=touchDist(e.touches[0], e.touches[1]);
@@ -561,7 +553,9 @@ pdfStage.addEventListener('touchstart',(e)=>{
     touchMode=null;
   }
 },{passive:false});
+
 pdfStage.addEventListener('touchmove',(e)=>{
+  if(pinchLock) return;               // <-- NEW
   if(touchMode==='pinch' && e.touches.length===2){
     e.preventDefault();
     const d=touchDist(e.touches[0], e.touches[1]);
@@ -578,7 +572,7 @@ pdfStage.addEventListener('touchmove',(e)=>{
     applyTransform();
   }
 },{passive:false});
-['touchend','touchcancel'].forEach(evt=> pdfStage.addEventListener(evt, ()=>{ touchMode=null; }, {passive:true}));
+['touchend','touchcancel'].forEach(evt=> pdfStage.addEventListener(evt, ()=>{ if(!pinchLock) touchMode=null; }, {passive:true}));
 
 /* ---------- SETTINGS ---------- */
 function openSettings(){
