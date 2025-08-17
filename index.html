@@ -13,6 +13,8 @@
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg)}
+  /* Prevent platform text auto-zoom from shrinking/enlarging randomly */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
   /* Toolbar */
   #toolbar{
@@ -62,6 +64,11 @@
   .resizable{ border:1px dashed #9aa; background:transparent; resize:both; overflow:hidden }
   .resizable img{ width:100%; height:100%; display:block }
 
+  /* While editing on mobile, force >=16px to stop Safari page-zoom */
+  @supports (-webkit-touch-callout: none) {
+    .text-anno.editing { font-size:16px !important; }
+  }
+
   /* Modals */
   .modal{
     display:none; position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
@@ -92,6 +99,7 @@
     <button class="btn" data-act="text" title="Text"><i data-feather="type"></i></button>
     <button class="btn" data-act="stamp" title="Stamp (✓/✕/□)"><i data-feather="check-circle"></i></button>
     <button class="btn" data-act="sign" title="Signature"><i data-feather="edit-2"></i></button>
+    <!-- zoom buttons removed -->
     <button class="btn" data-act="undo" title="Undo"><i data-feather="rotate-ccw"></i></button>
     <button class="btn" data-act="redo" title="Redo"><i data-feather="rotate-cw"></i></button>
     <button class="btn" data-act="help" title="Help"><i data-feather="help-circle"></i></button>
@@ -239,19 +247,10 @@ function setZoomAt(newZoom, clientX, clientY){
   panY = cy - wy * zoom;
   applyTransform();
 }
-
-/* NEW: hard reset view */
-function resetView(){
-  zoom = 1;
-  panX = 0;
-  panY = 0;
-  applyTransform();
-}
-
-/* SIMPLIFIED: initial centering = reset (let flex center the page) */
+function resetView(){ zoom=1; panX=0; panY=0; applyTransform(); }
 function centerContentOnce(){ resetView(); }
 
-/* ---------- display scaling helpers (WYSIWYG text sizing) ---------- */
+/* ---------- display scaling for text ---------- */
 function displayScaleFor(wrap){
   const canvas = wrap?.querySelector('canvas.pdfpage'); if(!canvas) return 1;
   const cssW = canvas.clientWidth || canvas.width;
@@ -322,15 +321,11 @@ fileInput.addEventListener('change', async (e)=>{
   openedFileName=name.replace(/\.[Pp][Dd][Ff]$/,'') || 'document';
   try{
     await ensurePdfEngine();
-
-    /* reset view BEFORE render so we don’t inherit old zoom/pan */
-    resetView();
-    pdfStage.scrollTop = 0;
+    resetView(); pdfStage.scrollTop = 0;
 
     const buf=await f.arrayBuffer();
     await openAndRender(buf);
 
-    /* keep initial view at 1x centered; then scale text for display width */
     centerContentOnce();
     rescaleAllText();
 
@@ -500,7 +495,22 @@ function bindDrag(el){
     window.removeEventListener('touchend',    onUp);
   };
 
-  const onUp=()=>{ if(isText && !dragging){ setTimeout(()=>{ try{ el.focus(); }catch{} }, 0); } cleanup(); };
+  const onUp=()=>{ 
+    if(isText && !dragging){ 
+      // Prevent iOS from zooming page when editing small text:
+      el.classList.add('editing');           // force >=16px via CSS while focused
+      // Restore desired display scaling on blur:
+      const onBlur=()=>{ 
+        el.classList.remove('editing'); 
+        const wrap=el.closest('.page-wrap'); 
+        applyDisplayScaleToTexts(wrap);
+        el.removeEventListener('blur', onBlur);
+      };
+      el.addEventListener('blur', onBlur);
+      setTimeout(()=>{ try{ el.focus(); }catch{} }, 0); 
+    } 
+    cleanup(); 
+  };
 
   el.addEventListener('pointerdown', onDown, {passive:false});
   el.addEventListener('mousedown',   onDown, {passive:false});
@@ -514,12 +524,18 @@ function bindPinchResize(box){
     e.preventDefault();
     const startDist=dist(e.touches[0], e.touches[1]);
     const startW=box.offsetWidth, startH=box.offsetHeight;
+    const DEAD=10; // px dead-zone to prevent accidental resize
     const move=(ev)=>{
       if(ev.touches.length!==2) return;
       ev.preventDefault();
-      const s=dist(ev.touches[0],ev.touches[1])/startDist;
-      box.style.width = (startW*s)+'px';
-      box.style.height = (startH*s)+'px';
+      const d=dist(ev.touches[0],ev.touches[1]);
+      const delta = d - startDist;
+      if (Math.abs(delta) < DEAD) return;
+      // damp the scale response to make it less sensitive
+      const factorRaw = d / startDist;
+      const factor = Math.pow(factorRaw, 0.35); // sub-linear response
+      box.style.width = (startW*factor)+'px';
+      box.style.height = (startH*factor)+'px';
       const svg=box.querySelector('svg'); if(svg){ svg.style.width='100%'; svg.style.height='100%'; }
     };
     const end=()=>{ document.removeEventListener('touchmove',move); document.removeEventListener('touchend',end); };
@@ -528,21 +544,22 @@ function bindPinchResize(box){
 }
 function dist(a,b){ const dx=a.clientX-b.clientX, dy=a.clientY-b.clientY; return Math.hypot(dx,dy); }
 
-/* ---------- desktop zoom & pan ---------- */
+/* ---------- desktop Ctrl/Cmd + wheel zoom; one-finger pan when zoom>1 ---------- */
 pdfStage.addEventListener('wheel',(e)=>{
   if(e.ctrlKey || e.metaKey){
     e.preventDefault();
-    const factor = e.deltaY<0 ? 1.1 : 0.9;
+    const factor = e.deltaY<0 ? 1.08 : 0.92; // slightly damped
     setZoomAt(zoom*factor, e.clientX, e.clientY);
   }
 },{passive:false});
 
-let touchMode=null, startDist=0, startZoom=1, startPanX=0, startPanY=0, lastCX=0, lastCY=0;
+let touchMode=null, startDist=0, startZoom=1, lastCX=0, lastCY=0;
+/* Pinch: use dead-zone + damped factor */
 pdfStage.addEventListener('touchstart',(e)=>{
   if(e.touches.length===2){
     touchMode='pinch';
     startDist=dist(e.touches[0], e.touches[1]);
-    startZoom=zoom; startPanX=panX; startPanY=panY;
+    startZoom=zoom;
   }else if(e.touches.length===1 && zoom>1){
     touchMode='drag';
     lastCX=e.touches[0].clientX; lastCY=e.touches[0].clientY;
@@ -554,7 +571,10 @@ pdfStage.addEventListener('touchmove',(e)=>{
   if(touchMode==='pinch' && e.touches.length===2){
     e.preventDefault();
     const d=dist(e.touches[0], e.touches[1]);
-    const factor=d/startDist;
+    const DEAD=12;
+    if (Math.abs(d - startDist) < DEAD) return;
+    const factorRaw = d / startDist;
+    const factor = Math.pow(factorRaw, 0.35); // damp sensitivity
     const midX=(e.touches[0].clientX + e.touches[1].clientX)/2;
     const midY=(e.touches[0].clientY + e.touches[1].clientY)/2;
     setZoomAt(startZoom*factor, midX, midY);
