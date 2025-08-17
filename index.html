@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>TurboSign — PDF Annotator</title>
+<title>TurboSign 3.3 — PDF Annotator</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <style>
   :root{
@@ -40,7 +40,7 @@
   .text-anno{
     font:16px Arial, sans-serif;
     color:#000; padding:2px 4px; background:transparent; min-width:10px; min-height:16px;
-    cursor:text; /* editable feel */
+    cursor:text;
   }
   .icon-anno svg{ width:26px; height:26px; }
   .resizable{ border:1px dashed #9aa; background:transparent; resize:both; overflow:hidden }
@@ -83,6 +83,7 @@
     <button class="btn" data-act="undo" title="Undo"><i data-feather="rotate-ccw"></i></button>
     <button class="btn" data-act="redo" title="Redo"><i data-feather="rotate-cw"></i></button>
     <button class="btn" data-act="help" title="Help"><i data-feather="help-circle"></i></button>
+    <button class="btn" data-act="settings" title="Text Settings"><i data-feather="sliders"></i></button>
     <button class="btn" data-act="save" title="Save PDF"><i data-feather="download"></i></button>
   </div>
 
@@ -125,30 +126,63 @@
   <!-- Help -->
   <div id="help-modal" class="modal help">
     <h3>How to use TurboSign</h3>
-    <p><b>Open:</b> click the <span class="kbd">folder</span> icon and choose a PDF.</p>
+    <p><b>Open:</b> tap the folder icon and choose a PDF.</p>
     <ul>
-      <li><b>Place items:</b> choose <em>Text</em>, <em>Stamp</em>, or <em>Signature</em>, then <b>double-tap</b> (or double-click) on the page.</li>
-      <li><b>Move:</b> drag any item. <b>Resize signatures</b> by corner (desktop) or <b>pinch</b> on phones.</li>
-      <li><b>Zoom:</b> use <span class="kbd">+</span>/<span class="kbd">−</span> buttons. (Annotations scale with the page.)</li>
+      <li><b>Place:</b> choose Text / Stamp / Signature, then <b>double-tap</b> (or double-click) on the page.</li>
+      <li><b>Move:</b> drag any item. <b>Resize signatures & stamps</b> by <b>pinch</b> (phones) or <b>Alt + mouse-wheel</b> (desktop). Text size: focus then <b>Ctrl/Cmd + “+ / −”</b> or <b>Alt + wheel</b>.</li>
+      <li><b>Zoom:</b> use toolbar +/−. Annotations scale with the page.</li>
       <li><b>Undo/Redo:</b> toolbar arrows.</li>
-      <li><b>Save:</b> flattens everything into a new PDF (no borders around signatures).</li>
+      <li><b>Save:</b> flattens everything into a new PDF. On iOS, Share → <b>Save to Files</b>.</li>
     </ul>
     <div class="row" style="margin-top:8px"><button class="chip" id="help-close"><i data-feather="x-circle"></i> Close</button></div>
   </div>
 
+  <!-- Settings -->
+  <div id="settings-modal" class="modal">
+    <h3>Text Settings</h3>
+    <div class="row" style="gap:12px; margin-bottom:10px">
+      <label class="chip"> Size
+        <input id="set-text-size" type="range" min="8" max="64" step="1" value="16" style="margin-left:8px; width:180px">
+        <span id="set-size-val" style="margin-left:6px; opacity:.9">16 px</span>
+      </label>
+      <label class="chip"> Font
+        <select id="set-text-font" style="margin-left:8px">
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="Helvetica, Arial, sans-serif">Helvetica</option>
+          <option value="Verdana, Geneva, sans-serif">Verdana</option>
+          <option value="'Trebuchet MS', Helvetica, sans-serif">Trebuchet MS</option>
+          <option value="'Times New Roman', Times, serif">Times New Roman</option>
+          <option value="Georgia, 'Times New Roman', Times, serif">Georgia</option>
+          <option value="'Courier New', Courier, monospace">Courier New</option>
+          <option value="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">System UI</option>
+        </select>
+      </label>
+    </div>
+    <div class="row" style="gap:8px; margin-bottom:10px">
+      <div id="set-preview" style="padding:8px 10px; background:#fff; color:#111; border-radius:8px;">
+        The quick brown fox — preview
+      </div>
+    </div>
+    <div class="row">
+      <button class="chip" id="set-apply-all"><i data-feather="type"></i> Apply to existing text</button>
+      <button class="chip" id="set-close"><i data-feather="x-circle"></i> Close</button>
+    </div>
+  </div>
+
   <div id="toast"></div>
 
-  <!-- Libs (order matters) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script>
-    if (window.pdfjsLib) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-    } else {
-      console.error("PDF.js failed to load — check network/CSP. pdfjsLib is undefined.");
-    }
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- Libs -->
+  <!-- Load Feather first; it’s small and harmless if re-run -->
   <script src="https://unpkg.com/feather-icons@4.29.2/dist/feather.min.js"></script>
+
+  <!-- Try local PDF.js first (works if you place these files in repo root).
+       If not present, CDN script will provide pdfjsLib. -->
+  <script src="pdf.min.js"></script>
+  <!-- CDN fallback (if local missing). Safe to include both; first one that defines pdfjsLib wins. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- PDF-LIB -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script>
 /* ---------- icons ---------- */
@@ -157,7 +191,19 @@ document.addEventListener('DOMContentLoaded', ()=> drawFeather(document));
 
 /* ---------- toast ---------- */
 const toastEl=document.getElementById('toast');
-function toast(msg,type='ok',ms=1400){ toastEl.textContent=msg; toastEl.className=''; toastEl.classList.add('show',type); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove('show'),ms); }
+function toast(msg,type='ok',ms=1600){ toastEl.textContent=msg; toastEl.className=''; toastEl.classList.add('show',type); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove('show'),ms); }
+
+/* ---------- PDF.js bootstrap (robust) ---------- */
+(function setupPdfJs(){
+  if(!window.pdfjsLib){
+    console.warn('pdfjsLib not found yet. If local pdf.min.js is missing, CDN should provide it.');
+  }
+  // Worker is optional; we’ll fall back to disableWorker if it fails.
+  if(window.pdfjsLib){
+    // Prefer local worker if you have it in the repo root; else it’s fine—render will fall back.
+    try{ pdfjsLib.GlobalWorkerOptions.workerSrc = "pdf.worker.min.js"; }catch(_){}
+  }
+})();
 
 /* ---------- elements & state ---------- */
 const fileInput = document.getElementById('file-input');
@@ -165,6 +211,7 @@ const pdfContainer = document.getElementById('pdf-container');
 const stampModal = document.getElementById('stamp-modal');
 const signModal = document.getElementById('sign-modal');
 const helpModal = document.getElementById('help-modal');
+const settingsModal = document.getElementById('settings-modal');
 
 let currentMode=null;        // 'text' | 'stamp-check' | 'stamp-x' | 'stamp-square' | 'sign'
 let signatureData=null;      // dataURL
@@ -173,7 +220,16 @@ let openedFileName=null;
 let zoom=1;                  // CSS zoom scale (applied to .page-wrap)
 const ZMIN=.6, ZMAX=2.5, ZSTEP=0.15;
 
-/* ---------- per-page history ---------- */
+/* ---------- text defaults ---------- */
+const TEXT_DEFAULTS = { size: 16, font: "Arial, sans-serif" };
+const sizeInput = document.getElementById('set-text-size');
+const sizeVal   = document.getElementById('set-size-val');
+const fontSel   = document.getElementById('set-text-font');
+const previewEl = document.getElementById('set-preview');
+function refreshPreview(){ previewEl.style.fontSize = (sizeInput?.value||16)+'px'; previewEl.style.fontFamily = (fontSel?.value||TEXT_DEFAULTS.font); }
+sizeInput.value = TEXT_DEFAULTS.size; sizeVal.textContent = TEXT_DEFAULTS.size+' px'; fontSel.value = TEXT_DEFAULTS.font; refreshPreview();
+
+/* ---------- history ---------- */
 const historyMap=new Map(); const HMAX=60;
 function ensureHist(w){ if(!historyMap.has(w)) historyMap.set(w,{undo:[],redo:[]}); return historyMap.get(w); }
 function overlayOf(w){ let ov=w.querySelector('.overlay'); if(!ov){ov=document.createElement('div'); ov.className='overlay'; w.appendChild(ov);} return ov; }
@@ -184,15 +240,16 @@ function restoreOverlay(w,html){ const ov=overlayOf(w); ov.innerHTML=html||''; o
 document.getElementById('toolbar').addEventListener('click', (e)=>{
   const btn=e.target.closest('.btn'); if(!btn) return;
   const act=btn.dataset.act;
-  if(act==='open') fileInput.click();
+  if(act==='open'){ fileInput.click(); }
   else if(act==='text'){ currentMode='text'; toast('Double-tap to place text'); }
-  else if(act==='stamp'){ stampModal.classList.add('active'); }
-  else if(act==='sign'){ openSign(); }
+  else if(act==='stamp'){ stampModal.classList.add('active'); drawFeather(stampModal); }
+  else if(act==='sign'){ openSign(); drawFeather(signModal); }
   else if(act==='zoomin'){ setZoom(zoom+ZSTEP); }
   else if(act==='zoomout'){ setZoom(zoom-ZSTEP); }
   else if(act==='undo'){ const w=activeWrap||pdfContainer.querySelector('.page-wrap'); if(!w) return; const h=ensureHist(w); if(h.undo.length){ const s=h.undo.pop(); h.redo.push(overlayOf(w).innerHTML); restoreOverlay(w,s);} }
   else if(act==='redo'){ const w=activeWrap||pdfContainer.querySelector('.page-wrap'); if(!w) return; const h=ensureHist(w); if(h.redo.length){ const s=h.redo.pop(); h.undo.push(overlayOf(w).innerHTML); restoreOverlay(w,s);} }
-  else if(act==='help'){ helpModal.classList.add('active'); }
+  else if(act==='help'){ helpModal.classList.add('active'); drawFeather(helpModal); }
+  else if(act==='settings'){ openSettings(); drawFeather(settingsModal); }
   else if(act==='save'){ savePdf(); }
 });
 
@@ -205,25 +262,30 @@ fileInput.addEventListener('change', async (e)=>{
     await renderPdf(await file.arrayBuffer());
     toast('PDF loaded');
   }catch(err){
-    console.error(err); toast('Failed to open PDF','err',2000);
+    console.error(err); toast('Failed to open PDF','err',2200);
   }
 });
 
 function requirePdfJs(){
   if(!window.pdfjsLib){
     toast('PDF.js not available', 'err', 2200);
-    throw new Error('PDF.js not available (pdfjsLib is undefined). Ensure the CDN script loaded.');
+    throw new Error('PDF.js not available (pdfjsLib is undefined). Ensure pdf.min.js/CDN loaded.');
   }
 }
 
 async function renderPdf(bytes){
   requirePdfJs();
-  // try worker; if that fails (CSP), fall back to main thread
-  let pdf; try{
-    pdf = await pdfjsLib.getDocument({data:bytes, disableWorker:false}).promise;
-  }catch{ pdf = await pdfjsLib.getDocument({data:bytes, disableWorker:true}).promise; }
-
   pdfContainer.innerHTML='';
+  let pdf;
+  try{
+    // Try with worker
+    pdf = await pdfjsLib.getDocument({data:bytes, disableWorker:false}).promise;
+  }catch(_err1){
+    console.warn('Worker render failed or blocked; switching to main thread.', _err1);
+    // Fallback without worker (always works on GitHub Pages)
+    pdf = await pdfjsLib.getDocument({data:bytes, disableWorker:true}).promise;
+  }
+
   for(let i=1;i<=pdf.numPages;i++){
     const page=await pdf.getPage(i);
     const vp=page.getViewport({scale:1.15});
@@ -236,9 +298,8 @@ async function renderPdf(bytes){
   }
 }
 
-/* ---------- Feather stamp helper: build an <svg> directly (no replace race) ---------- */
+/* ---------- Feather stamp generator for placed items ---------- */
 function makeStampSvg(name, size=26){
-  // name: 'check-circle' | 'x' | 'square'
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS,'svg');
   svg.setAttribute('viewBox','0 0 24 24');
@@ -256,7 +317,7 @@ function makeStampSvg(name, size=26){
 
   if(name==='check-circle'){ svg.append(circle()); svg.append(path('M9 12l2 2 4-4')); }
   else if(name==='x'){ svg.append(path('M18 6L6 18')); svg.append(path('M6 6L18 18')); }
-  else { svg.append(rect()); } // 'square'
+  else { svg.append(rect()); }
   return svg;
 }
 
@@ -267,7 +328,7 @@ stampModal.addEventListener('click',(e)=>{
   toast('Double-tap to place '+(st==='check'?'✓':st==='x'?'✕':'box'));
 });
 
-/* ---------- placement: double-click + double-tap recognizer ---------- */
+/* ---------- placement: double-click + double-tap ---------- */
 pdfContainer.addEventListener('dblclick', (e)=> placeAt(e.clientX, e.clientY, e.target));
 let lastTap=0;
 pdfContainer.addEventListener('touchend',(e)=>{
@@ -292,22 +353,27 @@ function placeAt(clientX, clientY, targetEl){
   if(currentMode==='text'){
     const d=document.createElement('div');
     d.className='draggable text-anno'; d.contentEditable=true; d.textContent='Text';
-    Object.assign(d.style,{left:x+'px', top:y+'px'});
+    Object.assign(d.style,{
+      left:x+'px', top:y+'px',
+      fontSize: TEXT_DEFAULTS.size + 'px',
+      fontFamily: TEXT_DEFAULTS.font
+    });
     ov.appendChild(d); bindDrag(d);
   }else if(currentMode.startsWith('stamp-')){
     const nm=currentMode.split('-')[1];
     const icon = (nm==='check') ? 'check-circle' : (nm==='x' ? 'x' : 'square');
 
-    // Use an HTML wrapper for dragging across browsers
     const box=document.createElement('div');
     box.className='draggable icon-anno';
-    Object.assign(box.style,{left:x+'px', top:y+'px', position:'absolute'});
+    Object.assign(box.style,{left:x+'px', top:y+'px', position:'absolute', width:'26px', height:'26px'});
 
     const svg = makeStampSvg(icon, 26);
+    svg.style.width='100%'; svg.style.height='100%';
     box.appendChild(svg);
 
     ov.appendChild(box);
     bindDrag(box);
+    bindPinchResize(box);
   }else if(currentMode==='sign' && signatureData){
     const box=document.createElement('div'); box.className='draggable resizable';
     Object.assign(box.style,{left:x+'px', top:y+'px', width:'180px', height:'80px'});
@@ -326,7 +392,10 @@ function bindDrag(el){
   const DRAG_THRESHOLD=6;
 
   const onDown=(ev)=>{
-    if(!isText) ev.preventDefault?.(); // allow text to get focus on tap
+    // If multi-touch start (pinch), do not start drag here — allow pinch handler.
+    if(ev.touches && ev.touches.length>1) return;
+
+    if(!isText) ev.preventDefault?.(); // text needs the tap to focus
     started=true;
     wrap = el.closest('.page-wrap');
     parent = el.offsetParent || el.closest('.overlay') || wrap;
@@ -388,8 +457,7 @@ function bindDrag(el){
 
   const onUp=(ev)=>{
     if(isText && !dragging){
-      // ensure focus for editing after a tap
-      setTimeout(()=>{ try{ el.focus(); /* optional: select all */ }catch{} }, 0);
+      setTimeout(()=>{ try{ el.focus(); }catch{} }, 0);
     }
     cleanup();
   };
@@ -399,25 +467,90 @@ function bindDrag(el){
   el.addEventListener('touchstart',  onDown, {passive:false});
 }
 
-/* ---------- pinch resize for signatures on mobile (touch fallback) ---------- */
+/* ---------- pinch resize for signatures & stamps ---------- */
 function bindPinchResize(box){
   box.addEventListener('touchstart', (e)=>{
     if(e.touches.length!==2) return;
     e.preventDefault();
-    const startDist=dist(e.touches[0], e.touches[1]);
+    const startDist=distance(e.touches[0], e.touches[1]);
     const startW=box.offsetWidth, startH=box.offsetHeight;
     const move=(ev)=>{
       if(ev.touches.length!==2) return;
       ev.preventDefault();
-      const s=dist(ev.touches[0],ev.touches[1])/startDist;
+      const s=distance(ev.touches[0],ev.touches[1])/startDist;
       box.style.width = (startW*s)+'px';
       box.style.height = (startH*s)+'px';
+      const svg=box.querySelector('svg'); if(svg){ svg.style.width='100%'; svg.style.height='100%'; }
     };
     const end=()=>{ document.removeEventListener('touchmove',move); document.removeEventListener('touchend',end); };
     document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('touchend',end);
   }, {passive:false});
 }
-function dist(a,b){ const dx=a.clientX-b.clientX, dy=a.clientY-b.clientY; return Math.hypot(dx,dy); }
+function distance(a,b){ const dx=a.clientX-b.clientX, dy=a.clientY-b.clientY; return Math.hypot(dx,dy); }
+
+/* ---------- desktop Alt+wheel resize for stamps & text ---------- */
+document.addEventListener('wheel', (e)=>{
+  if(!e.altKey) return;
+  const el = e.target.closest?.('.draggable'); if(!el) return;
+  e.preventDefault();
+  const delta = Math.sign(e.deltaY) * -1; // up = increase
+  if(el.classList.contains('text-anno')){
+    const cs=getComputedStyle(el); const fz=parseFloat(cs.fontSize)||16;
+    const next=Math.max(8, Math.min(128, fz + delta*1.5));
+    el.style.fontSize = next+'px';
+  }else{
+    const w=el.offsetWidth, h=el.offsetHeight;
+    const factor = 1 + (delta*0.1);
+    el.style.width  = Math.max(16, w*factor) +'px';
+    el.style.height = Math.max(16, h*factor)+'px';
+    const svg=el.querySelector('svg'); if(svg){ svg.style.width='100%'; svg.style.height='100%'; }
+  }
+}, {passive:false});
+
+/* ---------- text size via keyboard (focused) ---------- */
+document.addEventListener('keydown', (e)=>{
+  const t = document.activeElement;
+  if(!t || !t.classList?.contains('text-anno')) return;
+  if(!(e.ctrlKey||e.metaKey)) return;
+  if(e.key==='=' || e.key==='+'){ e.preventDefault(); bumpTextSize(t, +1.5); }
+  if(e.key==='-'){ e.preventDefault(); bumpTextSize(t, -1.5); }
+});
+function bumpTextSize(el, delta){
+  const cs=getComputedStyle(el); const fz=parseFloat(cs.fontSize)||16;
+  const next=Math.max(8, Math.min(128, fz + delta));
+  el.style.fontSize = next+'px';
+}
+
+/* ---------- SETTINGS ---------- */
+function openSettings(){
+  sizeInput.value = TEXT_DEFAULTS.size; sizeVal.textContent = TEXT_DEFAULTS.size + ' px';
+  fontSel.value = TEXT_DEFAULTS.font; refreshPreview();
+  settingsModal.classList.add('active');
+}
+sizeInput.addEventListener('input', ()=>{ TEXT_DEFAULTS.size=+sizeInput.value; sizeVal.textContent=sizeInput.value+' px'; refreshPreview(); });
+fontSel.addEventListener('change', ()=>{ TEXT_DEFAULTS.font=fontSel.value; refreshPreview(); });
+document.getElementById('set-apply-all').addEventListener('click', ()=>{
+  let count=0;
+  document.querySelectorAll('.text-anno').forEach(el=>{
+    el.style.fontSize = TEXT_DEFAULTS.size + 'px';
+    el.style.fontFamily = TEXT_DEFAULTS.font;
+    count++;
+  });
+  toast(`Applied to ${count} text item${count===1?'':'s'}`);
+});
+document.getElementById('set-close').addEventListener('click', ()=> settingsModal.classList.remove('active'));
+
+/* ---------- help & modals click-outside ---------- */
+document.getElementById('help-close').addEventListener('click',()=> helpModal.classList.remove('active'));
+[stampModal, signModal, helpModal, settingsModal].forEach(m=>{
+  m.addEventListener('click', (e)=>{ if(e.target===m) m.classList.remove('active'); });
+});
+
+/* ---------- zoom ---------- */
+function setZoom(z){
+  zoom=Math.min(ZMAX, Math.max(ZMIN, z));
+  document.querySelectorAll('.page-wrap').forEach(w=> w.style.transform=`scale(${zoom})`);
+}
 
 /* ---------- signature pad (Pointer Events) ---------- */
 const spView=document.getElementById('sp-view'), spCtx=spView.getContext('2d');
@@ -434,7 +567,6 @@ function spEnd(){ if(!spDrawing) return; spCtx.closePath(); spCtx.restore(); spD
 spView.addEventListener('pointerdown', (e)=>{ e.preventDefault(); spView.setPointerCapture?.(e.pointerId); const p=spPos(e); spBegin(p.x,p.y); });
 spView.addEventListener('pointermove', (e)=>{ if(!spDrawing) return; e.preventDefault(); const p=spPos(e); spLineTo(p.x,p.y); });
 ['pointerup','pointercancel','pointerleave'].forEach(type=> spView.addEventListener(type, (e)=>{ if(spDrawing){ e.preventDefault(); spEnd(); } }));
-
 signModal.addEventListener('click', async (e)=>{
   const b=e.target.closest('[data-sp]'); if(!b) return;
   const a=b.dataset.sp;
@@ -447,15 +579,6 @@ signModal.addEventListener('click', async (e)=>{
 document.getElementById('sp-ok').addEventListener('click',()=>{ signatureData=spView.toDataURL('image/png'); signModal.classList.remove('active'); currentMode='sign'; toast('Double-tap to place signature'); });
 document.getElementById('sp-cancel').addEventListener('click',()=> signModal.classList.remove('active'));
 
-/* ---------- help ---------- */
-document.getElementById('help-close').addEventListener('click',()=> helpModal.classList.remove('active'));
-
-/* ---------- zoom ---------- */
-function setZoom(z){
-  zoom=Math.min(ZMAX, Math.max(ZMIN, z));
-  document.querySelectorAll('.page-wrap').forEach(w=> w.style.transform=`scale(${zoom})`);
-}
-
 /* ---------- SVG → canvas (for export) ---------- */
 async function drawSvgToCtx(svg, ctx, x, y, w, h){
   const clone=svg.cloneNode(true);
@@ -466,15 +589,15 @@ async function drawSvgToCtx(svg, ctx, x, y, w, h){
   await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ ctx.drawImage(im,x,y,w,h); res(); }; im.onerror=rej; im.src=url; });
 }
 
-/* ---------- save (broad browser support) ---------- */
+/* ---------- save (iOS Share + desktop download) ---------- */
 async function savePdf(){
   try{
     const pdfDoc=await PDFLib.PDFDocument.create();
+
     for(const wrap of pdfContainer.children){
       const pageCanvas=wrap.querySelector('canvas.pdfpage'); if(!pageCanvas) continue;
       const page=pdfDoc.addPage([pageCanvas.width, pageCanvas.height]);
 
-      // compose: page image + overlay into a canvas
       const comp=document.createElement('canvas'); comp.width=pageCanvas.width; comp.height=pageCanvas.height;
       const ctx=comp.getContext('2d'); ctx.drawImage(pageCanvas,0,0);
 
@@ -492,7 +615,7 @@ async function savePdf(){
         const h=(er.height)/scale * sy;
 
         const img=el.querySelector?.('img');
-        if(img){ ctx.drawImage(img,x,y,w,h); continue; } // signature only
+        if(img){ ctx.drawImage(img,x,y,w,h); continue; }
 
         if(el.classList.contains('text-anno')){
           const cs=getComputedStyle(el); const fz=parseInt(cs.fontSize)||16;
@@ -508,10 +631,24 @@ async function savePdf(){
       page.drawImage(jpg,{x:0,y:0,width:pageCanvas.width,height:pageCanvas.height});
     }
 
-    // Save strategies
     const bytes = await pdfDoc.save();
     const blob = new Blob([bytes], { type: "application/pdf" });
     const fname = (openedFileName||'signed')+'.signed.pdf';
+
+    const canShareFile = !!(navigator.share && navigator.canShare && (()=>{try{
+      return navigator.canShare({ files: [new File([blob], fname, {type:'application/pdf'})] });
+    }catch(_){ return false; }})());
+    if (canShareFile) {
+      try {
+        await navigator.share({
+          files: [new File([blob], fname, { type:'application/pdf' })],
+          title: 'TurboSign PDF',
+          text: 'Annotated PDF from TurboSign'
+        });
+        toast('Shared to Files', 'ok');
+        return;
+      } catch(e){ /* canceled/fail -> fallback */ }
+    }
 
     if (window.navigator && typeof window.navigator.msSaveOrOpenBlob === 'function') {
       window.navigator.msSaveOrOpenBlob(blob, fname);
@@ -526,17 +663,13 @@ async function savePdf(){
     if (isMobile) {
       const w = window.open(url, "_blank");
       if (!w) { window.location.href = url; }
+      toast('Opened PDF — Share ▶︎ Save to Files', 'ok', 2500);
     } else {
       a.click();
     }
     setTimeout(()=> URL.revokeObjectURL(url), 2000);
-  }catch(e){ console.error(e); toast('Save failed','err',2000); }
+  }catch(e){ console.error(e); toast('Save failed','err',2200); }
 }
-
-/* ---------- modals click-outside close ---------- */
-[stampModal, signModal, helpModal].forEach(m=>{
-  m.addEventListener('click', (e)=>{ if(e.target===m) m.classList.remove('active'); });
-});
 
 /* ---------- keyboard zoom (desktop) ---------- */
 document.addEventListener('keydown',(e)=>{
