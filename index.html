@@ -13,15 +13,20 @@
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg)}
+
+  /* Toolbar — centered; scrolls horizontally on narrow screens */
   #toolbar{
-    position:fixed; inset:auto 50% 12px; transform:translateX(-50%);
+    position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
     display:flex; gap:10px; padding:10px; border-radius:28px; z-index:40;
-    background:var(--panel); border:1px solid var(--border); backdrop-filter:blur(10px)
+    background:var(--panel); border:1px solid var(--border); backdrop-filter:blur(10px);
+    max-width:95vw; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
   }
+  #toolbar::-webkit-scrollbar{ display:none }
+
   .btn{
     appearance:none; border:1px solid var(--border); background:var(--btn); color:var(--icon);
     width:52px; height:52px; border-radius:50%; display:grid; place-items:center;
-    cursor:pointer; transition:background .2s, transform .08s
+    cursor:pointer; transition:background .2s, transform .08s; flex:0 0 auto;
   }
   .btn:hover{ background:var(--btn-hov) }
   .btn:active{ transform:translateY(1px) }
@@ -64,7 +69,7 @@
   <!-- Hidden input -->
   <input id="file-input" type="file" accept="application/pdf,.pdf" style="display:none" />
 
-  <!-- Toolbar (test button removed) -->
+  <!-- Toolbar -->
   <div id="toolbar" aria-label="Tools">
     <button class="btn" data-act="open" title="Open PDF"><i data-feather="folder"></i></button>
     <button class="btn" data-act="text" title="Text"><i data-feather="type"></i></button>
@@ -130,7 +135,7 @@
 
   <div id="toast"></div>
 
-  <!-- Version-pinned libs (order matters). No SRI to avoid blocked loads on GH Pages. -->
+  <!-- Version-pinned libs (order matters). -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>
     if (window.pdfjsLib) {
@@ -266,10 +271,19 @@ function placeAt(clientX, clientY, targetEl){
     const nm=currentMode.split('-')[1];
     const i=document.createElement('i');
     i.setAttribute('data-feather', nm==='check'?'check-circle': nm==='x'?'x':'square');
-    i.className='draggable icon-anno'; Object.assign(i.style,{left:x+'px', top:y+'px', position:'absolute'});
-    ov.appendChild(i); drawFeather(ov);
+    i.style.position='absolute';
+    i.style.left=x+'px'; i.style.top=y+'px';
+    ov.appendChild(i);
+    drawFeather(ov);
+    // Feather replaces <i> with <svg>. Grab the newly inserted SVG (last-of-type in overlay)
     const svg=ov.querySelector('svg:last-of-type');
-    if(svg){ svg.classList.add('draggable','icon-anno'); Object.assign(svg.style,{left:x+'px', top:y+'px', position:'absolute'}); bindDrag(svg); }
+    if(svg){
+      svg.classList.add('draggable','icon-anno');
+      svg.style.position='absolute';
+      svg.style.left=x+'px';
+      svg.style.top=y+'px';
+      bindDrag(svg);               // <-- now stamps are draggable
+    }
   }else if(currentMode==='sign' && signatureData){
     const box=document.createElement('div'); box.className='draggable resizable';
     Object.assign(box.style,{left:x+'px', top:y+'px', width:'180px', height:'80px'});
