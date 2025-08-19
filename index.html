@@ -88,10 +88,7 @@
       z-index:60; background:rgba(20,24,32,.96); color:#e9eef5;
       border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:12px;
       width:min(92vw,520px); box-shadow:0 12px 40px rgba(0,0,0,.5);
-      display:block;          /* keep layout stable */
-      opacity:0;              /* invisible by default */
-      pointer-events:none;    /* cannot intercept clicks/taps */
-      transition:opacity .15s ease-out;
+      display:block; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
     }
     .modal.show{ opacity:1; pointer-events:auto; }
 
@@ -101,10 +98,8 @@
   </style>
 </head>
 <body>
-  <!-- Hidden file input -->
   <input id="file-input" type="file" accept="application/pdf,.pdf" />
 
-  <!-- Toolbar -->
   <div id="toolbar" aria-label="Tools">
     <button class="btn" data-act="open" title="Open PDF"><i data-feather="folder"></i></button>
     <button class="btn" data-act="text" title="Text (double‑tap/click)"><i data-feather="type"></i></button>
@@ -117,24 +112,16 @@
     <button class="btn" data-act="help" title="Help"><i data-feather="help-circle"></i></button>
   </div>
 
-  <!-- Stage -->
-  <div id="pdf-stage">
-    <div id="pdf-scroll">
-      <div id="pdf-container"></div>
-    </div>
-  </div>
+  <div id="pdf-stage"><div id="pdf-scroll"><div id="pdf-container"></div></div></div>
 
-  <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <!-- Restore banner -->
   <div id="restore-banner">
     <span id="restore-text">A previous session was found.</span>
     <button id="restore-yes">Restore</button>
     <button id="restore-no">Discard</button>
   </div>
 
-  <!-- Signature Modal -->
   <div id="sign-modal" class="modal" role="dialog" aria-modal="true" aria-label="Signature">
     <h3 style="margin:6px 0 10px;font:600 16px system-ui">Draw your signature</h3>
     <canvas id="sig-pad" width="500" height="200" style="display:block;max-width:100%;height:auto;background:#fff;border-radius:10px;touch-action:none"></canvas>
@@ -145,11 +132,8 @@
     </div>
   </div>
 
-  <!-- Feather icons (optional) -->
   <script src="./lib/feather.min.js"></script>
   <script>addEventListener('DOMContentLoaded',()=>{try{feather.replace()}catch(e){}})</script>
-
-  <!-- App -->
   <script type="module" src="./lib/app/app.mjs"></script>
 </body>
 </html>
