@@ -47,7 +47,7 @@
     .page-wrap{ position:relative; width:max(320px,72vw); margin:12px 0 }
     canvas.pdfpage{ display:block; width:100%; height:auto; background:var(--canvas-bg); border-radius:6px; touch-action:none }
 
-    /* Overlay + annotations */
+    /* Overlays & annotations */
     .overlay{ position:absolute; inset:0; pointer-events:auto; touch-action:manipulation; }
     .anno{ position:absolute; user-select:none; touch-action:none; }
     .anno.selected{ outline:1.5px dashed #4ea3ff; outline-offset:2px }
@@ -62,51 +62,32 @@
     /* Hidden file input */
     #file-input{ display:none }
 
-    /* Toast */
+    /* Toast (top) */
     #toast{ position:fixed; top:12px; left:50%; transform:translateX(-50%);
       background:#0b1020d0; color:#eaf2ff; padding:8px 12px; border-radius:10px;
-      border:1px solid rgba(255,255,255,.18); z-index:60; font-size:13px; display:none }
+      border:1px solid rgba(255,255,255,.18); z-index:70; font-size:13px; display:none }
     #toast.show{ display:block; animation:fade .2s ease-out }
     #toast.ok{ box-shadow:0 0 0 1px var(--ok) inset } #toast.err{ box-shadow:0 0 0 1px var(--err) inset }
     @keyframes fade{ from{opacity:0; transform:translateX(-50%) translateY(-6px)} to{opacity:1} }
 
-    /* Zoom HUD */
-    #zoom-hud{
-      position:fixed; right:12px; top:12px;
-      padding:8px 10px; background:rgba(20,24,32,.94);
-      border:1px solid rgba(255,255,255,.14); border-radius:10px; z-index:55;
-      display:flex; align-items:center; gap:8px; color:#e9eef5; backdrop-filter: blur(8px);
+    /* Restore banner */
+    #restore-banner{
+      position:fixed; top:48px; left:50%; transform:translateX(-50%);
+      z-index:69; background:rgba(20,24,32,.96); color:#e9eef5;
+      border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:8px 10px;
+      display:none; gap:8px; align-items:center; font:13px system-ui;
     }
-    #zoom-hud .zbtn{
+    #restore-banner button{
       appearance:none; border:1px solid rgba(255,255,255,.18);
-      background:#1c2430; color:#e9eef5; border-radius:8px;
-      width:36px; height:32px; display:grid; place-items:center; cursor:pointer;
+      background:#1c2430; color:#e9eef5; border-radius:8px; padding:6px 10px; cursor:pointer;
     }
-    #zoom-hud .zfit{ width:auto; padding:0 10px }
-    #zoom-hud .zval{ min-width:52px; text-align:right; font:12px/1 system-ui }
-    #zoom-hud input[type="range"]{ width:140px; height:28px; accent-color:#4ea3ff; -webkit-tap-highlight-color: transparent; }
-    @media (max-width:480px){
-      #zoom-hud{ right:10px; top:10px; gap:6px }
-      #zoom-hud input[type="range"]{ width:120px }
-    }
-
-    /* Signature Modal */
-    .modal{
-      display:none; position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
-      z-index:60; background:rgba(20,24,32,.96); color:#e9eef5; border:1px solid rgba(255,255,255,.14);
-      border-radius:12px; padding:12px; width:min(92vw,520px); box-shadow:0 12px 40px rgba(0,0,0,.5)
-    }
-    .modal.show{ display:block }
-    .modal .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px }
-    .modal .chip{ appearance:none; border:1px solid rgba(255,255,255,.14); background:#1c2430; color:#e9eef5;
-      border-radius:10px; padding:8px 10px; cursor:pointer }
   </style>
 </head>
 <body>
   <!-- Hidden file input -->
   <input id="file-input" type="file" accept="application/pdf,.pdf" />
 
-  <!-- Toolbar (explicit buttons so everything is visible even without JS injection) -->
+  <!-- Toolbar -->
   <div id="toolbar" aria-label="Tools">
     <button class="btn" data-act="open" title="Open PDF"><i data-feather="folder"></i></button>
     <button class="btn" data-act="text" title="Text (double‑tap/click)"><i data-feather="type"></i></button>
@@ -116,8 +97,6 @@
     <button class="btn" data-act="redo" title="Redo"><i data-feather="rotate-cw"></i></button>
     <button class="btn" data-act="settings" title="Text Settings"><i data-feather="sliders"></i></button>
     <button class="btn" data-act="save" title="Save (flatten to PDF)"><i data-feather="download"></i></button>
-    <button class="btn" data-act="export" title="Export annotations (JSON)"><i data-feather="upload"></i></button>
-    <button class="btn" data-act="import" title="Import annotations (JSON)"><i data-feather="download-cloud"></i></button>
     <button class="btn" data-act="help" title="Help"><i data-feather="help-circle"></i></button>
   </div>
 
@@ -128,17 +107,15 @@
     </div>
   </div>
 
-  <!-- Zoom HUD -->
-  <div id="zoom-hud" role="group" aria-label="Zoom controls">
-    <button class="zbtn zminus" aria-label="Zoom out">−</button>
-    <input id="zoom-slider" type="range" min="60" max="300" step="1" value="100" aria-label="Zoom slider">
-    <button class="zbtn zplus" aria-label="Zoom in">+</button>
-    <button class="zbtn zfit" id="zoom-fit" aria-label="Fit to width">Fit</button>
-    <div class="zval" id="zoom-val">100%</div>
-  </div>
-
   <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Restore banner -->
+  <div id="restore-banner">
+    <span id="restore-text">A previous session was found.</span>
+    <button id="restore-yes">Restore</button>
+    <button id="restore-no">Discard</button>
+  </div>
 
   <!-- Signature Modal -->
   <div id="sign-modal" class="modal" role="dialog" aria-modal="true" aria-label="Signature">
@@ -151,11 +128,11 @@
     </div>
   </div>
 
-  <!-- Feather icons (optional; UI still works without it) -->
+  <!-- Feather icons (optional) -->
   <script src="./lib/feather.min.js"></script>
   <script>addEventListener('DOMContentLoaded',()=>{try{feather.replace()}catch(e){}})</script>
 
-  <!-- App (everything else lives here) -->
+  <!-- App -->
   <script type="module" src="./lib/app/app.mjs"></script>
 </body>
 </html>
