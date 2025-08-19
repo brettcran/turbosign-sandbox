@@ -60,7 +60,26 @@ canvas.pdfpage{ display:block; width:100%; height:auto; background:var(--canvas-
 /* hidden file input */
 #file-input{ display:none }
 
-/* toast unchanged */
+/* === Additions for mobile zoom + handles + modal === */
+#pdf-container{ transform-origin: 0 0; } /* zoom anchor will be updated at runtime */
+
+/* Selection + resize handles */
+.anno{ position:absolute; user-select:none; touch-action:none; }
+.anno.selected{ outline:1.5px dashed #4ea3ff; outline-offset:2px }
+.anno .handle{ position:absolute; width:14px; height:14px; background:#fff; border:2px solid #4ea3ff; border-radius:3px; }
+.anno .handle.br{ right:-8px; bottom:-8px; cursor:nwse-resize; touch-action:none }
+
+/* Simple modal */
+.modal{
+  display:none; position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
+  z-index:60; background:rgba(20,24,32,.96); color:#e9eef5; border:1px solid rgba(255,255,255,.14);
+  border-radius:12px; padding:12px; width:min(92vw,520px); box-shadow:0 12px 40px rgba(0,0,0,.5)
+}
+.modal.show{ display:block }
+.modal .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px }
+.modal .chip{ appearance:none; border:1px solid rgba(255,255,255,.14); background:#1c2430; color:#e9eef5;
+  border-radius:10px; padding:8px 10px; cursor:pointer
+}
 
   </style>
 </head>
