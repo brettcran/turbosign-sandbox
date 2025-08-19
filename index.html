@@ -109,5 +109,15 @@ canvas.pdfpage{ display:block; width:100%; height:auto; background:var(--canvas-
 
   <!-- App (all logic in one ESM module) -->
   <script type="module" src="./lib/app/app.mjs"></script>
+  <!-- Signature Modal -->
+<div id="sign-modal" class="modal" role="dialog" aria-modal="true" aria-label="Signature">
+  <h3 style="margin:6px 0 10px;font:600 16px system-ui">Draw your signature</h3>
+  <canvas id="sig-pad" width="500" height="200" style="display:block;max-width:100%;height:auto;background:#fff;border-radius:10px;touch-action:none"></canvas>
+  <div class="row">
+    <button class="chip" id="sig-use">Use</button>
+    <button class="chip" id="sig-clear">Clear</button>
+    <button class="chip" id="sig-cancel">Cancel</button>
+  </div>
+</div>
 </body>
 </html>
