@@ -45,7 +45,7 @@
       padding:20px 0 calc(140px + var(--safe-bottom)); min-height:60vh;
     }
 
-    /* IMPORTANT: let canvas own its width (true 1:1); don't force 72vw */
+    /* Let canvas own its width (true 1:1) */
     .page-wrap{ position:relative; margin:12px 0 }
     canvas.pdfpage{
       display:block;
@@ -89,7 +89,7 @@
       background:#1c2430; color:#e9eef5; border-radius:8px; padding:6px 10px; cursor:pointer;
     }
 
-    /* Signature Modal — hidden until .show */
+    /* Signature Modal */
     .modal{
       position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
       z-index:60; background:rgba(20,24,32,.96); color:#e9eef5;
@@ -98,7 +98,6 @@
       display:block; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
     }
     .modal.show{ opacity:1; pointer-events:auto; }
-
     .modal .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px }
     .modal .chip{ appearance:none; border:1px solid rgba(255,255,255,.14); background:#1c2430; color:#e9eef5;
       border-radius:10px; padding:8px 10px; cursor:pointer }
@@ -119,11 +118,7 @@
     <button class="btn" data-act="help" title="Help"><i data-feather="help-circle"></i></button>
   </div>
 
-  <div id="pdf-stage">
-    <div id="pdf-scroll">
-      <div id="pdf-container"></div>
-    </div>
-  </div>
+  <div id="pdf-stage"><div id="pdf-scroll"><div id="pdf-container"></div></div></div>
 
   <div id="toast" role="status" aria-live="polite"></div>
 
@@ -135,7 +130,7 @@
 
   <div id="sign-modal" class="modal" role="dialog" aria-modal="true" aria-label="Signature">
     <h3 style="margin:6px 0 10px;font:600 16px system-ui">Draw your signature</h3>
-    <!-- visually white pad, but bitmap stays transparent -->
+    <!-- looks white, but exported bitmap is transparent -->
     <canvas id="sig-pad" width="500" height="200"
       style="display:block;max-width:100%;height:auto;background:#fff;border-radius:10px;touch-action:none"></canvas>
     <div class="row">
@@ -147,7 +142,6 @@
 
   <script src="./lib/feather.min.js"></script>
   <script>addEventListener('DOMContentLoaded',()=>{try{feather.replace()}catch(e){}})</script>
-
   <script type="module" src="./lib/app/app.mjs"></script>
 </body>
 </html>
