@@ -13,7 +13,6 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    html{ -webkit-text-size-adjust: 100%; } /* iOS: prevent font auto-zoom */
     body{margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg)}
 
     /* Toolbar */
@@ -28,7 +27,6 @@
       appearance:none; border:1px solid var(--border); background:var(--btn); color:var(--icon);
       width:56px; height:56px; border-radius:50%; display:grid; place-items:center;
       cursor:pointer; transition:background .2s, transform .08s; flex:0 0 auto;
-      -webkit-tap-highlight-color: transparent;
     }
     .btn:hover{ background:var(--btn-hov) }
     .btn:active{ transform:translateY(1px) }
@@ -58,6 +56,9 @@
       font:16px Arial, sans-serif; cursor:text; -webkit-user-select:text; user-select:text;
     }
     .anno.stamp svg{ width:22px; height:22px; stroke:#000; stroke-width:2; fill:none }
+    .anno.sign img{ user-select:none; pointer-events:none; display:block }
+    .anno .handle{ position:absolute; width:14px; height:14px; background:#fff; border:2px solid #4ea3ff; border-radius:3px; }
+    .anno .handle.br{ right:-8px; bottom:-8px; cursor:nwse-resize; touch-action:none }
 
     /* Hidden file input */
     #file-input{ display:none }
@@ -82,7 +83,7 @@
       background:#1c2430; color:#e9eef5; border-radius:8px; padding:6px 10px; cursor:pointer;
     }
 
-    /* Signature Modal */
+    /* Signature Modal — hidden until .show */
     .modal{
       position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
       z-index:60; background:rgba(20,24,32,.96); color:#e9eef5;
@@ -98,8 +99,10 @@
   </style>
 </head>
 <body>
+  <!-- Hidden file input -->
   <input id="file-input" type="file" accept="application/pdf,.pdf" />
 
+  <!-- Toolbar -->
   <div id="toolbar" aria-label="Tools">
     <button class="btn" data-act="open" title="Open PDF"><i data-feather="folder"></i></button>
     <button class="btn" data-act="text" title="Text (double‑tap/click)"><i data-feather="type"></i></button>
@@ -112,19 +115,29 @@
     <button class="btn" data-act="help" title="Help"><i data-feather="help-circle"></i></button>
   </div>
 
-  <div id="pdf-stage"><div id="pdf-scroll"><div id="pdf-container"></div></div></div>
+  <!-- Stage -->
+  <div id="pdf-stage">
+    <div id="pdf-scroll">
+      <div id="pdf-container"></div>
+    </div>
+  </div>
 
+  <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
 
+  <!-- Restore banner -->
   <div id="restore-banner">
     <span id="restore-text">A previous session was found.</span>
     <button id="restore-yes">Restore</button>
     <button id="restore-no">Discard</button>
   </div>
 
+  <!-- Signature Modal -->
   <div id="sign-modal" class="modal" role="dialog" aria-modal="true" aria-label="Signature">
     <h3 style="margin:6px 0 10px;font:600 16px system-ui">Draw your signature</h3>
-    <canvas id="sig-pad" width="500" height="200" style="display:block;max-width:100%;height:auto;background:#fff;border-radius:10px;touch-action:none"></canvas>
+    <!-- transparent background (alpha preserved) -->
+    <canvas id="sig-pad" width="500" height="200"
+      style="display:block;max-width:100%;height:auto;background:transparent;border-radius:10px;touch-action:none"></canvas>
     <div class="row">
       <button class="chip" id="sig-use">Use</button>
       <button class="chip" id="sig-clear">Clear</button>
@@ -132,8 +145,11 @@
     </div>
   </div>
 
+  <!-- Feather icons (optional) -->
   <script src="./lib/feather.min.js"></script>
   <script>addEventListener('DOMContentLoaded',()=>{try{feather.replace()}catch(e){}})</script>
+
+  <!-- App -->
   <script type="module" src="./lib/app/app.mjs"></script>
 </body>
 </html>
