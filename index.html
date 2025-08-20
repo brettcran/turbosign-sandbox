@@ -2,108 +2,100 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TurboSign — PDF Annotator (v4.1)</title>
+  <title>TurboSign — PDF Annotator (ESM)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark light">
+
   <style>
-    :root {
+    :root{
       --bg:#0f131a; --fg:#e9eef5; --panel:rgba(255,255,255,.08); --border:rgba(255,255,255,.14);
       --btn:#1c2430; --btn-hov:#263244; --icon:#e9eef5; --canvas-bg:#fff;
       --ok:#16a34a; --err:#ef4444; --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
-    * { box-sizing:border-box }
-    html,body { height:100% }
-    body {
-      margin:0;
-      font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      background:var(--bg); color:var(--fg);
-    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg)}
 
     /* Toolbar */
-    #toolbar {
+    #toolbar{
       position:fixed; bottom:calc(12px + var(--safe-bottom)); left:50%; transform:translateX(-50%);
       display:flex; gap:12px; padding:12px; border-radius:28px; z-index:40;
       background:var(--panel); border:1px solid var(--border); backdrop-filter:blur(10px);
       max-width:95vw; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
     }
-    #toolbar::-webkit-scrollbar { display:none }
-    .btn {
+    #toolbar::-webkit-scrollbar{ display:none }
+    .btn{
       appearance:none; border:1px solid var(--border); background:var(--btn); color:var(--icon);
       width:56px; height:56px; border-radius:50%; display:grid; place-items:center;
       cursor:pointer; transition:background .2s, transform .08s; flex:0 0 auto;
     }
-    .btn:hover { background:var(--btn-hov) }
-    .btn:active { transform:translateY(1px) }
-    .btn svg { width:24px; height:24px; stroke:var(--icon) }
-
-    @media (max-width:420px) {
-      .btn { width:60px; height:60px }
-      .btn svg { width:24px; height:24px }
+    .btn:hover{ background:var(--btn-hov) }
+    .btn:active{ transform:translateY(1px) }
+    .btn svg{ width:24px; height:24px; stroke:var(--icon) }
+    @media (max-width:420px){
+      .btn{ width:60px; height:60px }
+      .btn svg{ width:24px; height:24px }
     }
 
     /* Stage */
-    #pdf-stage { position:relative; height:100vh; overflow:auto; -webkit-overflow-scrolling:touch; background:var(--bg) }
-    #pdf-scroll { position:relative; touch-action:pan-y }
-    #pdf-container {
+    #pdf-stage{ position:relative; height:100vh; overflow:auto; -webkit-overflow-scrolling:touch; background:var(--bg) }
+    #pdf-scroll{ position:relative; touch-action:pan-y }
+    #pdf-container{
       position:relative; transform-origin:0 0;
       display:flex; flex-direction:column; align-items:center; gap:12px;
       padding:20px 0 calc(140px + var(--safe-bottom)); min-height:60vh;
     }
-    .page-wrap { position:relative; width:max(320px,72vw); margin:12px 0 }
-    canvas.pdfpage { display:block; width:100%; height:auto; background:var(--canvas-bg); border-radius:6px; touch-action:none }
+    .page-wrap{ position:relative; width:max(320px,72vw); margin:12px 0 }
+    canvas.pdfpage{ display:block; width:100%; height:auto; background:var(--canvas-bg); border-radius:6px; touch-action:none }
 
     /* Overlays & annotations */
-    .overlay { position:absolute; inset:0; pointer-events:auto; touch-action:manipulation; }
-    .anno { position:absolute; user-select:none; touch-action:none; }
-    .anno.selected { outline:1.5px dashed #4ea3ff; outline-offset:2px }
-    .anno.text {
+    .overlay{ position:absolute; inset:0; pointer-events:auto; touch-action:manipulation; }
+    .anno{ position:absolute; user-select:none; touch-action:none; }
+    .anno.selected{ outline:1.5px dashed #4ea3ff; outline-offset:2px }
+    .anno.text{
       min-width:10px; min-height:16px; padding:2px 4px; background:transparent; color:#000;
       font:16px Arial, sans-serif; cursor:text; -webkit-user-select:text; user-select:text;
     }
-    .anno.stamp svg { width:22px; height:22px; stroke:#000; stroke-width:2; fill:none }
-    .anno.sign img,
-    .anno.photo img { user-select:none; pointer-events:none; display:block; max-width:100%; height:auto }
+    .anno.stamp svg{ width:22px; height:22px; stroke:#000; stroke-width:2; fill:none }
+    .anno.sign img, .anno.image img{ user-select:none; pointer-events:none; display:block }
+    .anno .handle{ position:absolute; width:14px; height:14px; background:#fff; border:2px solid #4ea3ff; border-radius:3px; }
+    .anno .handle.br{ right:-8px; bottom:-8px; cursor:nwse-resize; touch-action:none }
 
     /* Hidden file input */
-    #file-input { display:none }
+    #file-input{ display:none }
 
     /* Toast */
-    #toast {
-      position:fixed; top:12px; left:50%; transform:translateX(-50%);
+    #toast{ position:fixed; top:12px; left:50%; transform:translateX(-50%);
       background:#0b1020d0; color:#eaf2ff; padding:8px 12px; border-radius:10px;
-      border:1px solid rgba(255,255,255,.18); z-index:70; font-size:13px; display:none
-    }
-    #toast.show { display:block; animation:fade .2s ease-out }
-    #toast.ok { box-shadow:0 0 0 1px var(--ok) inset }
-    #toast.err { box-shadow:0 0 0 1px var(--err) inset }
-    @keyframes fade { from{opacity:0;transform:translateX(-50%) translateY(-6px)} to{opacity:1} }
+      border:1px solid rgba(255,255,255,.18); z-index:70; font-size:13px; display:none }
+    #toast.show{ display:block; animation:fade .2s ease-out }
+    #toast.ok{ box-shadow:0 0 0 1px var(--ok) inset } #toast.err{ box-shadow:0 0 0 1px var(--err) inset }
+    @keyframes fade{ from{opacity:0; transform:translateX(-50%) translateY(-6px)} to{opacity:1} }
 
     /* Restore banner */
-    #restore-banner {
+    #restore-banner{
       position:fixed; top:48px; left:50%; transform:translateX(-50%);
       z-index:69; background:rgba(20,24,32,.96); color:#e9eef5;
       border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:8px 10px;
       display:none; gap:8px; align-items:center; font:13px system-ui;
     }
-    #restore-banner button {
+    #restore-banner button{
       appearance:none; border:1px solid rgba(255,255,255,.18);
       background:#1c2430; color:#e9eef5; border-radius:8px; padding:6px 10px; cursor:pointer;
     }
 
     /* Signature Modal */
-    .modal {
+    .modal{
       position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
       z-index:60; background:rgba(20,24,32,.96); color:#e9eef5;
       border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:12px;
       width:min(92vw,520px); box-shadow:0 12px 40px rgba(0,0,0,.5);
       display:block; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
     }
-    .modal.show { opacity:1; pointer-events:auto; }
-    .modal .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px }
-    .modal .chip {
-      appearance:none; border:1px solid rgba(255,255,255,.14); background:#1c2430; color:#e9eef5;
-      border-radius:10px; padding:8px 10px; cursor:pointer
-    }
+    .modal.show{ opacity:1; pointer-events:auto; }
+    .modal .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px }
+    .modal .chip{ appearance:none; border:1px solid rgba(255,255,255,.14); background:#1c2430; color:#e9eef5;
+      border-radius:10px; padding:8px 10px; cursor:pointer }
   </style>
 </head>
 <body>
@@ -116,7 +108,6 @@
     <button class="btn" data-act="text" title="Text (double-tap/click)"><i data-feather="type"></i></button>
     <button class="btn" data-act="stamp" title="Stamp (✓)"><i data-feather="check"></i></button>
     <button class="btn" data-act="sign" title="Signature"><i data-feather="edit-2"></i></button>
-    <button class="btn" data-act="photo" title="Insert Photo"><i data-feather="image"></i></button>
     <button class="btn" data-act="undo" title="Undo"><i data-feather="rotate-ccw"></i></button>
     <button class="btn" data-act="redo" title="Redo"><i data-feather="rotate-cw"></i></button>
     <button class="btn" data-act="settings" title="Text Settings"><i data-feather="sliders"></i></button>
@@ -153,10 +144,7 @@
     </div>
   </div>
 
-  <!-- Feather icons -->
-  <script src="./lib/feather.min.js"></script>
-  <script>addEventListener('DOMContentLoaded',()=>{try{feather.replace()}catch(e){}})</script>
-
+  <!-- Feather icons (ESM auto replaced in app.mjs) -->
   <!-- App -->
   <script type="module" src="./lib/app/app.mjs"></script>
 </body>
