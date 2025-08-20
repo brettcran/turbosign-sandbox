@@ -2,37 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TurboSign — PDF Annotator (ESM + Fluent Icons)</title>
+  <title>TurboSign — PDF Annotator (ESM + Phosphor)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark light">
   <style>
     :root{
       --bg:#0f131a; --fg:#e9eef5; --panel:rgba(255,255,255,.08); --border:rgba(255,255,255,.14);
-      --btn:#1c2430; --btn-hov:#263244; --icon:#e9eef5; --canvas-bg:#fff;
+      --btn:#141a22; --btn-hov:#1b2330; --icon:#e9eef5; --canvas-bg:#fff;
       --ok:#16a34a; --err:#ef4444; --safe-bottom: env(safe-area-inset-bottom, 0px);
       --accent:#4ea3ff;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg)}
+    body{margin:0; font:14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:var(--bg); color:var(--fg)}
 
     /* Toolbar */
     #toolbar{
       position:fixed; bottom:calc(12px + var(--safe-bottom)); left:50%; transform:translateX(-50%);
-      display:flex; gap:12px; padding:12px; border-radius:28px; z-index:40;
-      background:var(--panel); border:1px solid var(--border); backdrop-filter:blur(10px);
-      max-width:95vw; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+      display:flex; gap:12px; padding:12px; border-radius:18px; z-index:40;
+      background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+      border:1px solid var(--border); backdrop-filter:blur(10px);
+      max-width:96vw; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+      box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
     }
     #toolbar::-webkit-scrollbar{ display:none }
     .btn{
-      appearance:none; border:1px solid var(--border); background:var(--btn); color:var(--icon);
-      width:56px; height:56px; border-radius:50%; display:grid; place-items:center;
-      cursor:pointer; transition:background .2s, transform .08s, outline-color .15s; flex:0 0 auto;
+      appearance:none; border:1px solid rgba(255,255,255,.12); background:var(--btn); color:var(--icon);
+      width:56px; height:56px; border-radius:14px; display:grid; place-items:center;
+      cursor:pointer; transition:background .2s, transform .08s, outline-color .15s, box-shadow .2s; flex:0 0 auto;
+      box-shadow:0 2px 8px rgba(0,0,0,.3);
     }
     .btn:hover{ background:var(--btn-hov) }
     .btn:active{ transform:translateY(1px) }
-    .btn iconify-icon{ width:24px; height:24px; transition:color .2s, transform .2s }
-    .btn.active{ outline:2px solid var(--accent); outline-offset:2px; background:#263244; }
+    .btn iconify-icon{ width:24px; height:24px; transition:transform .2s, opacity .2s }
+    .btn.active{
+      outline:2px solid var(--accent); outline-offset:2px; background:#1b2636;
+      box-shadow:0 0 0 1px rgba(78,163,255,.35), 0 8px 20px rgba(78,163,255,.25);
+    }
     @media (max-width:420px){
       .btn{ width:60px; height:60px }
       .btn iconify-icon{ width:24px; height:24px }
@@ -44,10 +50,10 @@
     #pdf-container{
       position:relative; transform-origin:0 0;
       display:flex; flex-direction:column; align-items:center; gap:12px;
-      padding:20px 0 calc(140px + var(--safe-bottom)); min-height:60vh;
+      padding:20px 0 calc(160px + var(--safe-bottom)); min-height:60vh;
     }
     .page-wrap{ position:relative; width:max(320px,72vw); margin:12px 0 }
-    canvas.pdfpage{ display:block; width:100%; height:auto; background:var(--canvas-bg); border-radius:6px; touch-action:none }
+    canvas.pdfpage{ display:block; width:100%; height:auto; background:var(--canvas-bg); border-radius:10px; touch-action:none }
 
     /* Overlays & annotations */
     .overlay{ position:absolute; inset:0; pointer-events:auto; touch-action:manipulation; }
@@ -63,7 +69,7 @@
     .anno .handle.br{ right:-8px; bottom:-8px; cursor:nwse-resize; touch-action:none }
 
     /* Hidden inputs */
-    #file-input,#photo-input{ display:none }
+    #file-input,#photo-file{ display:none }
 
     /* Toast */
     #toast{ position:fixed; top:12px; left:50%; transform:translateX(-50%);
@@ -76,62 +82,70 @@
     /* Signature Modal */
     .modal{
       position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
-      z-index:60; background:rgba(20,24,32,.96); color:#e9eef5;
-      border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:12px;
-      width:min(92vw,520px); box-shadow:0 12px 40px rgba(0,0,0,.5);
+      z-index:60; background:rgba(18,22,30,.96); color:#e9eef5;
+      border:1px solid rgba(255,255,255,.14); border-radius:14px; padding:14px;
+      width:min(94vw,560px); box-shadow:0 16px 48px rgba(0,0,0,.55);
       display:block; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
     }
     .modal.show{ opacity:1; pointer-events:auto; }
+    .modal h3{ margin:6px 0 10px; font:600 16px system-ui }
     .modal .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px }
-    .modal .chip{ appearance:none; border:1px solid rgba(255,255,255,.14); background:#1c2430; color:#e9eef5;
+    .chip{ appearance:none; border:1px solid rgba(255,255,255,.14); background:#1c2430; color:#e9eef5;
       border-radius:10px; padding:8px 10px; cursor:pointer }
 
     /* Text Settings Panel */
     #text-settings{
-      position:fixed; right:12px; bottom:calc(92px + var(--safe-bottom)); z-index:60;
-      background:rgba(20,24,32,.94); border:1px solid rgba(255,255,255,.14); border-radius:12px;
+      position:fixed; right:12px; bottom:calc(98px + var(--safe-bottom)); z-index:60;
+      background:rgba(18,22,30,.94); border:1px solid rgba(255,255,255,.14); border-radius:12px;
       padding:10px; min-width:240px; color:#e9eef5; font:13px system-ui, sans-serif; display:none;
+      box-shadow:0 12px 40px rgba(0,0,0,.45);
     }
     #text-settings .row{ display:flex; gap:8px; align-items:center; margin:8px 0; }
     #text-settings input[type="range"]{ width:140px }
+
+    /* Photo Modal */
+    #photo-modal .section{ display:none; margin-top:8px }
+    #photo-modal .section.show{ display:block }
+    #camera-view{ width:100%; max-height:50vh; border-radius:10px; background:#000; }
+    #capture-canvas{ display:none }
   </style>
 </head>
 <body>
   <!-- Hidden inputs -->
   <input id="file-input" type="file" accept="application/pdf,.pdf" />
-  <input id="photo-input" type="file" accept="image/*" capture="environment" />
+  <input id="photo-file" type="file" accept="image/*" />
 
-  <!-- Toolbar (Fluent via Iconify; outline → filled on hover/touch + exclusive active state) -->
+  <!-- Toolbar (Phosphor via Iconify; regular→filled on hover/touch; exclusive active state) -->
   <div id="toolbar" aria-label="Tools">
-    <button class="btn" data-act="open" data-icon="document-arrow-up-24" title="Open PDF">
-      <iconify-icon icon="fluent:document-arrow-up-24-regular"></iconify-icon>
+    <button class="btn" data-act="open"  data-icon="file-arrow-up" title="Open PDF">
+      <iconify-icon icon="ph:file-arrow-up"></iconify-icon>
     </button>
-    <button class="btn" data-act="text" data-icon="textbox-more-24" title="Text (double‑tap/click)">
-      <iconify-icon icon="fluent:textbox-more-24-regular"></iconify-icon>
+    <button class="btn" data-act="text"  data-icon="text-aa" title="Text (double‑tap/click)">
+      <iconify-icon icon="ph:text-aa"></iconify-icon>
     </button>
-    <button class="btn" data-act="stamp" data-icon="checkmark-circle-24" title="Stamp (✓)">
-      <iconify-icon icon="fluent:checkmark-circle-24-regular"></iconify-icon>
+    <button class="btn" data-act="stamp" data-icon="seal-check" title="Stamp (✓)">
+      <iconify-icon icon="ph:seal-check"></iconify-icon>
     </button>
-    <button class="btn" data-act="sign" data-icon="signature-24" title="Signature">
-      <iconify-icon icon="fluent:signature-24-regular"></iconify-icon>
+    <button class="btn" data-act="sign"  data-icon="signature" title="Signature">
+      <iconify-icon icon="ph:signature"></iconify-icon>
     </button>
-    <button class="btn" data-act="photo" data-icon="image-add-24" title="Insert Photo">
-      <iconify-icon icon="fluent:image-add-24-regular"></iconify-icon>
+    <button class="btn" data-act="scan"  data-icon="scan" title="Scan / Insert Photo">
+      <iconify-icon icon="ph:scan"></iconify-icon>
     </button>
-    <button class="btn" data-act="undo" data-icon="arrow-undo-24" title="Undo">
-      <iconify-icon icon="fluent:arrow-undo-24-regular"></iconify-icon>
+    <button class="btn" data-act="undo"  data-icon="arrow-arc-left" title="Undo">
+      <iconify-icon icon="ph:arrow-arc-left"></iconify-icon>
     </button>
-    <button class="btn" data-act="redo" data-icon="arrow-redo-24" title="Redo">
-      <iconify-icon icon="fluent:arrow-redo-24-regular"></iconify-icon>
+    <button class="btn" data-act="redo"  data-icon="arrow-arc-right" title="Redo">
+      <iconify-icon icon="ph:arrow-arc-right"></iconify-icon>
     </button>
-    <button class="btn" data-act="settings" data-icon="settings-24" title="Text Settings">
-      <iconify-icon icon="fluent:settings-24-regular"></iconify-icon>
+    <button class="btn" data-act="settings" data-icon="sliders" title="Text Settings">
+      <iconify-icon icon="ph:sliders"></iconify-icon>
     </button>
-    <button class="btn" data-act="save" data-icon="save-arrow-right-24" title="Save (flatten to PDF)">
-      <iconify-icon icon="fluent:save-arrow-right-24-regular"></iconify-icon>
+    <button class="btn" data-act="save" data-icon="floppy-disk-back" title="Save (flatten to PDF)">
+      <iconify-icon icon="ph:floppy-disk-back"></iconify-icon>
     </button>
-    <button class="btn" data-act="help" data-icon="question-circle-24" title="Help">
-      <iconify-icon icon="fluent:question-circle-24-regular"></iconify-icon>
+    <button class="btn" data-act="help" data-icon="question" title="Help">
+      <iconify-icon icon="ph:question"></iconify-icon>
     </button>
   </div>
 
@@ -147,7 +161,7 @@
 
   <!-- Signature Modal -->
   <div id="sign-modal" class="modal" role="dialog" aria-modal="true" aria-label="Signature">
-    <h3 style="margin:6px 0 10px;font:600 16px system-ui">Draw your signature</h3>
+    <h3>Draw your signature</h3>
     <canvas id="sig-pad" width="500" height="200"
       style="display:block;max-width:100%;height:auto;background:#fff;border-radius:10px;touch-action:none"></canvas>
     <div class="row">
@@ -181,13 +195,46 @@
     </div>
   </div>
 
-  <!-- Iconify web component (ESM) & regular↔filled hover/touch swap -->
+  <!-- Photo / Scan Modal -->
+  <div id="photo-modal" class="modal" role="dialog" aria-modal="true" aria-label="Insert Photo or Scan">
+    <h3>Insert Photo / Scan</h3>
+
+    <div class="row">
+      <button class="chip" id="pm-use-camera">Use Camera</button>
+      <button class="chip" id="pm-choose-photo">Choose Photo</button>
+      <button class="chip" id="pm-close">Close</button>
+    </div>
+
+    <!-- Camera section -->
+    <div id="pm-camera" class="section">
+      <video id="camera-view" playsinline autoplay muted></video>
+      <canvas id="capture-canvas" width="1280" height="720"></canvas>
+      <div class="row">
+        <button class="chip" id="pm-capture">Capture</button>
+        <button class="chip" id="pm-retake"  style="display:none;">Retake</button>
+        <button class="chip" id="pm-use-photo" style="display:none;">Use Photo</button>
+      </div>
+    </div>
+
+    <!-- File picker section -->
+    <div id="pm-file" class="section">
+      <p style="opacity:.8">Select an image from your device.</p>
+      <div class="row"><button class="chip" id="pm-browse">Browse…</button></div>
+    </div>
+  </div>
+
+  <!-- Iconify web component (ESM) + regular↔filled hover/touch swap -->
   <script type="module">
     import 'https://cdn.jsdelivr.net/npm/iconify-icon@3.0.0/dist/iconify-icon.min.js';
+
+    // Phosphor: regular (default) → filled on hover/touch; revert on leave
+    const filledName = (base) => base.endsWith('-fill') ? base : base + '-fill';
+    const regularName = (base) => base.replace(/-fill$/, '');
+
     const swap = (btn, filled) => {
       const base = btn.dataset.icon;
       const iconEl = btn.querySelector('iconify-icon');
-      iconEl?.setAttribute('icon', `fluent:${base}-${filled ? 'filled' : 'regular'}`);
+      iconEl?.setAttribute('icon', `ph:${filled ? filledName(base) : regularName(base)}`);
     };
     document.querySelectorAll('#toolbar .btn').forEach(btn=>{
       btn.addEventListener('mouseenter', ()=>swap(btn, true));
