@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TurboSign — PDF Annotator (ESM + Phosphor)</title>
+  <title>TurboSign — PDF Annotator (ESM)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark light">
   <style>
@@ -34,14 +34,13 @@
     }
     .btn:hover{ background:var(--btn-hov) }
     .btn:active{ transform:translateY(1px) }
-    .btn iconify-icon{ width:24px; height:24px; transition:transform .2s, opacity .2s }
+    .btn svg{ width:32px; height:32px; stroke:currentColor; fill:none; stroke-width:2; }
     .btn.active{
       outline:2px solid var(--accent); outline-offset:2px; background:#1b2636;
       box-shadow:0 0 0 1px rgba(78,163,255,.35), 0 8px 20px rgba(78,163,255,.25);
     }
     @media (max-width:420px){
-      .btn{ width:60px; height:60px }
-      .btn iconify-icon{ width:24px; height:24px }
+      .btn svg{ width:36px; height:36px }
     }
 
     /* Stage */
@@ -115,37 +114,84 @@
   <input id="file-input" type="file" accept="application/pdf,.pdf" />
   <input id="photo-file" type="file" accept="image/*" />
 
-  <!-- Toolbar (Phosphor via Iconify; regular→filled on hover/touch; exclusive active state) -->
+  <!-- Toolbar (sleek SVG icons; bigger icons, same button size) -->
   <div id="toolbar" aria-label="Tools">
-    <button class="btn" data-act="open"  data-icon="file-arrow-up" title="Open PDF">
-      <iconify-icon icon="ph:file-arrow-up"></iconify-icon>
+    <!-- Open -->
+    <button class="btn" data-act="open" title="Open PDF" aria-label="Open PDF">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3.5 7.5h5.7l1.8 2H20a1.5 1.5 0 0 1 1.5 1.5v6A2.5 2.5 0 0 1 19 19.5H5A2.5 2.5 0 0 1 2.5 17V9a1.5 1.5 0 0 1 1-1.5Z"/>
+        <path d="M12 14V9m0 0l-2 2m2-2l2 2" />
+      </svg>
     </button>
-    <button class="btn" data-act="text"  data-icon="text-aa" title="Text (double‑tap/click)">
-      <iconify-icon icon="ph:text-aa"></iconify-icon>
+
+    <!-- Text -->
+    <button class="btn" data-act="text" title="Text (double‑tap/click)" aria-label="Text">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 6h16M10 6v12m4-12v12" />
+      </svg>
     </button>
-    <button class="btn" data-act="stamp" data-icon="seal-check" title="Stamp (✓)">
-      <iconify-icon icon="ph:seal-check"></iconify-icon>
+
+    <!-- Stamp (check) -->
+    <button class="btn" data-act="stamp" title="Stamp (✓)" aria-label="Stamp">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
     </button>
-    <button class="btn" data-act="sign"  data-icon="signature" title="Signature">
-      <iconify-icon icon="ph:signature"></iconify-icon>
+
+    <!-- Signature -->
+    <button class="btn" data-act="sign" title="Signature" aria-label="Signature">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 16c3-2 4 2 6 2s3-4 5-4 2 4 5 4M3 20h18" />
+      </svg>
     </button>
-    <button class="btn" data-act="scan"  data-icon="scan" title="Scan / Insert Photo">
-      <iconify-icon icon="ph:scan"></iconify-icon>
+
+    <!-- Scan / Photo -->
+    <button class="btn" data-act="scan" title="Scan / Insert Photo" aria-label="Scan / Insert Photo">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 7V5a2 2 0 0 1 2-2h2M21 7V5a2 2 0 0 0-2-2h-2M3 17v2a2 2 0 0 0 2 2h2M21 17v2a2 2 0 0 1-2 2h-2" />
+        <rect x="7" y="8" width="10" height="8" rx="2" ry="2" />
+      </svg>
     </button>
-    <button class="btn" data-act="undo"  data-icon="arrow-arc-left" title="Undo">
-      <iconify-icon icon="ph:arrow-arc-left"></iconify-icon>
+
+    <!-- Undo -->
+    <button class="btn" data-act="undo" title="Undo" aria-label="Undo">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 7l-4 4 4 4" />
+        <path d="M3 11h10a5 5 0 1 1 0 10h-2" />
+      </svg>
     </button>
-    <button class="btn" data-act="redo"  data-icon="arrow-arc-right" title="Redo">
-      <iconify-icon icon="ph:arrow-arc-right"></iconify-icon>
+
+    <!-- Redo -->
+    <button class="btn" data-act="redo" title="Redo" aria-label="Redo">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M17 7l4 4-4 4" />
+        <path d="M21 11H11a5 5 0 1 0 0 10h2" />
+      </svg>
     </button>
-    <button class="btn" data-act="settings" data-icon="sliders" title="Text Settings">
-      <iconify-icon icon="ph:sliders"></iconify-icon>
+
+    <!-- Settings -->
+    <button class="btn" data-act="settings" title="Text Settings" aria-label="Text Settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+        <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.08.08a2 2 0 1 1-2.83 2.83l-.08-.08A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .32 1.7 1.7 0 0 0-.7 1.38V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 8 19.4a1.7 1.7 0 0 0-1.87-.34l-.08.08a2 2 0 1 1-2.83-2.83l.08-.08A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.32-1 1.7 1.7 0 0 0-1.38-.7H2a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 8a1.7 1.7 0 0 0 .34-1.87l-.08-.08A2 2 0 1 1 7.69 3.2l.08.08A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.32 1.7 1.7 0 0 0 .7-1.38V2a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 .7 1.38 1.7 1.7 0 0 0 1 .32 1.7 1.7 0 0 0 1.38-.7l.08-.08a2 2 0 1 1 2.83 2.83l-.08.08A1.7 1.7 0 0 0 19.4 9c0 .35.12.69.32 1a1.7 1.7 0 0 0 1.38.7H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.38.7c-.2.31-.32.65-.32 1Z" />
+      </svg>
     </button>
-    <button class="btn" data-act="save" data-icon="floppy-disk-back" title="Save (flatten to PDF)">
-      <iconify-icon icon="ph:floppy-disk-back"></iconify-icon>
+
+    <!-- Save -->
+    <button class="btn" data-act="save" title="Save (flatten to PDF)" aria-label="Save">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 7a2 2 0 0 1 2-2h7l5 5v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
+        <path d="M12 3v6m0 0H6" />
+        <path d="M8 21v-6h8v6" />
+      </svg>
     </button>
-    <button class="btn" data-act="help" data-icon="question" title="Help">
-      <iconify-icon icon="ph:question"></iconify-icon>
+
+    <!-- Help -->
+    <button class="btn" data-act="help" title="Help" aria-label="Help">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 17h.01M9.09 9a3 3 0 1 1 5.82 1c0 1.5-1.5 2-2 3" />
+        <circle cx="12" cy="12" r="9" />
+      </svg>
     </button>
   </div>
 
@@ -222,28 +268,6 @@
       <div class="row"><button class="chip" id="pm-browse">Browse…</button></div>
     </div>
   </div>
-
-  <!-- Iconify web component (ESM) + regular↔filled hover/touch swap -->
-  <script type="module">
-    import 'https://cdn.jsdelivr.net/npm/iconify-icon@3.0.0/dist/iconify-icon.min.js';
-
-    // Phosphor: regular (default) → filled on hover/touch; revert on leave
-    const filledName = (base) => base.endsWith('-fill') ? base : base + '-fill';
-    const regularName = (base) => base.replace(/-fill$/, '');
-
-    const swap = (btn, filled) => {
-      const base = btn.dataset.icon;
-      const iconEl = btn.querySelector('iconify-icon');
-      iconEl?.setAttribute('icon', `ph:${filled ? filledName(base) : regularName(base)}`);
-    };
-    document.querySelectorAll('#toolbar .btn').forEach(btn=>{
-      btn.addEventListener('mouseenter', ()=>swap(btn, true));
-      btn.addEventListener('mouseleave', ()=>swap(btn, false));
-      btn.addEventListener('touchstart', ()=>swap(btn, true), {passive:true});
-      btn.addEventListener('touchend',   ()=>swap(btn, false));
-      btn.addEventListener('touchcancel',()=>swap(btn, false));
-    });
-  </script>
 
   <!-- App (ESM) -->
   <script type="module" src="./lib/app/app.mjs"></script>
