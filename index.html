@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TurboSign — PDF Annotator (ESM)</title>
+  <title>TurboSign — PDF Annotator (ESM + IconPark)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark light">
-
   <style>
     :root{
       --bg:#0f131a; --fg:#e9eef5; --panel:rgba(255,255,255,.08); --border:rgba(255,255,255,.14);
@@ -31,10 +30,10 @@
     }
     .btn:hover{ background:var(--btn-hov) }
     .btn:active{ transform:translateY(1px) }
-    .btn svg{ width:24px; height:24px; stroke:var(--icon) }
+    .btn iconify-icon{ width:24px; height:24px }
     @media (max-width:420px){
       .btn{ width:60px; height:60px }
-      .btn svg{ width:24px; height:24px }
+      .btn iconify-icon{ width:24px; height:24px }
     }
 
     /* Stage */
@@ -72,18 +71,6 @@
     #toast.ok{ box-shadow:0 0 0 1px var(--ok) inset } #toast.err{ box-shadow:0 0 0 1px var(--err) inset }
     @keyframes fade{ from{opacity:0; transform:translateX(-50%) translateY(-6px)} to{opacity:1} }
 
-    /* Restore banner */
-    #restore-banner{
-      position:fixed; top:48px; left:50%; transform:translateX(-50%);
-      z-index:69; background:rgba(20,24,32,.96); color:#e9eef5;
-      border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:8px 10px;
-      display:none; gap:8px; align-items:center; font:13px system-ui;
-    }
-    #restore-banner button{
-      appearance:none; border:1px solid rgba(255,255,255,.18);
-      background:#1c2430; color:#e9eef5; border-radius:8px; padding:6px 10px; cursor:pointer;
-    }
-
     /* Signature Modal */
     .modal{
       position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
@@ -102,17 +89,35 @@
   <!-- Hidden file input -->
   <input id="file-input" type="file" accept="application/pdf,.pdf" />
 
-  <!-- Toolbar -->
+  <!-- Toolbar (IconPark via Iconify) -->
   <div id="toolbar" aria-label="Tools">
-    <button class="btn" data-act="open" title="Open PDF"><i data-feather="folder"></i></button>
-    <button class="btn" data-act="text" title="Text (double-tap/click)"><i data-feather="type"></i></button>
-    <button class="btn" data-act="stamp" title="Stamp (✓)"><i data-feather="check"></i></button>
-    <button class="btn" data-act="sign" title="Signature"><i data-feather="edit-2"></i></button>
-    <button class="btn" data-act="undo" title="Undo"><i data-feather="rotate-ccw"></i></button>
-    <button class="btn" data-act="redo" title="Redo"><i data-feather="rotate-cw"></i></button>
-    <button class="btn" data-act="settings" title="Text Settings"><i data-feather="sliders"></i></button>
-    <button class="btn" data-act="save" title="Save (flatten to PDF)"><i data-feather="download"></i></button>
-    <button class="btn" data-act="help" title="Help"><i data-feather="help-circle"></i></button>
+    <button class="btn" data-act="open" title="Open PDF">
+      <iconify-icon icon="icon-park-outline:folder-open" width="24" height="24"></iconify-icon>
+    </button>
+    <button class="btn" data-act="text" title="Text (double‑tap/click)">
+      <iconify-icon icon="icon-park-outline:text" width="24" height="24"></iconify-icon>
+    </button>
+    <button class="btn" data-act="stamp" title="Stamp (✓)">
+      <iconify-icon icon="icon-park-outline:check-one" width="24" height="24"></iconify-icon>
+    </button>
+    <button class="btn" data-act="sign" title="Signature">
+      <iconify-icon icon="icon-park-outline:edit-two" width="24" height="24"></iconify-icon>
+    </button>
+    <button class="btn" data-act="undo" title="Undo">
+      <iconify-icon icon="icon-park-outline:undo" width="24" height="24"></iconify-icon>
+    </button>
+    <button class="btn" data-act="redo" title="Redo">
+      <iconify-icon icon="icon-park-outline:redo" width="24" height="24"></iconify-icon>
+    </button>
+    <button class="btn" data-act="settings" title="Text Settings">
+      <iconify-icon icon="icon-park-outline:setting-two" width="24" height="24"></iconify-icon>
+    </button>
+    <button class="btn" data-act="save" title="Save (flatten to PDF)">
+      <iconify-icon icon="icon-park-outline:download-one" width="24" height="24"></iconify-icon>
+    </button>
+    <button class="btn" data-act="help" title="Help">
+      <iconify-icon icon="icon-park-outline:help" width="24" height="24"></iconify-icon>
+    </button>
   </div>
 
   <!-- Stage -->
@@ -124,13 +129,6 @@
 
   <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
-
-  <!-- Restore banner -->
-  <div id="restore-banner">
-    <span id="restore-text">A previous session was found.</span>
-    <button id="restore-yes">Restore</button>
-    <button id="restore-no">Discard</button>
-  </div>
 
   <!-- Signature Modal -->
   <div id="sign-modal" class="modal" role="dialog" aria-modal="true" aria-label="Signature">
@@ -144,8 +142,7 @@
     </div>
   </div>
 
-  <!-- Feather icons (ESM auto replaced in app.mjs) -->
-  <!-- App -->
+  <!-- App (ESM) -->
   <script type="module" src="./lib/app/app.mjs"></script>
 </body>
 </html>
