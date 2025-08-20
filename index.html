@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TurboSign — PDF Annotator (ESM + IconPark)</title>
+  <title>TurboSign — PDF Annotator (ESM + Fluent Icons)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark light">
   <style>
@@ -30,7 +30,7 @@
     }
     .btn:hover{ background:var(--btn-hov) }
     .btn:active{ transform:translateY(1px) }
-    .btn iconify-icon{ width:24px; height:24px }
+    .btn iconify-icon{ width:24px; height:24px; transition:color .2s, transform .2s }
     @media (max-width:420px){
       .btn{ width:60px; height:60px }
       .btn iconify-icon{ width:24px; height:24px }
@@ -89,34 +89,34 @@
   <!-- Hidden file input -->
   <input id="file-input" type="file" accept="application/pdf,.pdf" />
 
-  <!-- Toolbar (IconPark via Iconify) -->
+  <!-- Toolbar (Fluent via Iconify; outline → filled on hover/touch) -->
   <div id="toolbar" aria-label="Tools">
-    <button class="btn" data-act="open" title="Open PDF">
-      <iconify-icon icon="icon-park-outline:folder-open" width="24" height="24"></iconify-icon>
+    <button class="btn" data-act="open" data-icon="folder-24" title="Open PDF">
+      <iconify-icon icon="fluent:folder-24-regular"></iconify-icon>
     </button>
-    <button class="btn" data-act="text" title="Text (double‑tap/click)">
-      <iconify-icon icon="icon-park-outline:text" width="24" height="24"></iconify-icon>
+    <button class="btn" data-act="text" data-icon="text-24" title="Text (double‑tap/click)">
+      <iconify-icon icon="fluent:text-24-regular"></iconify-icon>
     </button>
-    <button class="btn" data-act="stamp" title="Stamp (✓)">
-      <iconify-icon icon="icon-park-outline:check-one" width="24" height="24"></iconify-icon>
+    <button class="btn" data-act="stamp" data-icon="checkmark-24" title="Stamp (✓)">
+      <iconify-icon icon="fluent:checkmark-24-regular"></iconify-icon>
     </button>
-    <button class="btn" data-act="sign" title="Signature">
-      <iconify-icon icon="icon-park-outline:edit-two" width="24" height="24"></iconify-icon>
+    <button class="btn" data-act="sign" data-icon="edit-24" title="Signature">
+      <iconify-icon icon="fluent:edit-24-regular"></iconify-icon>
     </button>
-    <button class="btn" data-act="undo" title="Undo">
-      <iconify-icon icon="icon-park-outline:undo" width="24" height="24"></iconify-icon>
+    <button class="btn" data-act="undo" data-icon="arrow-undo-24" title="Undo">
+      <iconify-icon icon="fluent:arrow-undo-24-regular"></iconify-icon>
     </button>
-    <button class="btn" data-act="redo" title="Redo">
-      <iconify-icon icon="icon-park-outline:redo" width="24" height="24"></iconify-icon>
+    <button class="btn" data-act="redo" data-icon="arrow-redo-24" title="Redo">
+      <iconify-icon icon="fluent:arrow-redo-24-regular"></iconify-icon>
     </button>
-    <button class="btn" data-act="settings" title="Text Settings">
-      <iconify-icon icon="icon-park-outline:setting-two" width="24" height="24"></iconify-icon>
+    <button class="btn" data-act="settings" data-icon="settings-24" title="Text Settings">
+      <iconify-icon icon="fluent:settings-24-regular"></iconify-icon>
     </button>
-    <button class="btn" data-act="save" title="Save (flatten to PDF)">
-      <iconify-icon icon="icon-park-outline:download-one" width="24" height="24"></iconify-icon>
+    <button class="btn" data-act="save" data-icon="save-24" title="Save (flatten to PDF)">
+      <iconify-icon icon="fluent:save-24-regular"></iconify-icon>
     </button>
-    <button class="btn" data-act="help" title="Help">
-      <iconify-icon icon="icon-park-outline:help" width="24" height="24"></iconify-icon>
+    <button class="btn" data-act="help" data-icon="question-circle-24" title="Help">
+      <iconify-icon icon="fluent:question-circle-24-regular"></iconify-icon>
     </button>
   </div>
 
@@ -141,6 +141,24 @@
       <button class="chip" id="sig-cancel">Cancel</button>
     </div>
   </div>
+
+  <!-- Iconify web component (ESM) & hover/touch swap -->
+  <script type="module">
+    import 'https://cdn.jsdelivr.net/npm/iconify-icon@3.0.0/dist/iconify-icon.min.js';
+    // outline → filled swap
+    const swap = (btn, filled) => {
+      const base = btn.dataset.icon;
+      const iconEl = btn.querySelector('iconify-icon');
+      iconEl.setAttribute('icon', `fluent:${base}-${filled ? 'filled' : 'regular'}`);
+    };
+    document.querySelectorAll('#toolbar .btn').forEach(btn=>{
+      btn.addEventListener('mouseenter', ()=>swap(btn, true));
+      btn.addEventListener('mouseleave', ()=>swap(btn, false));
+      btn.addEventListener('touchstart', ()=>swap(btn, true), {passive:true});
+      btn.addEventListener('touchend',   ()=>swap(btn, false));
+      btn.addEventListener('touchcancel',()=>swap(btn, false));
+    });
+  </script>
 
   <!-- App (ESM) -->
   <script type="module" src="./lib/app/app.mjs"></script>
