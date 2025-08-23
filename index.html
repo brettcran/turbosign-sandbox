@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TurboSign — PDF Annotator</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>TurboSign — PDF Annotator (4.1 Gold)</title>
+  <!-- We run our own in-stage pinch zoom. Prevent Safari page-zoom. -->
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
   <meta name="color-scheme" content="dark light">
   <style>
     :root{
@@ -14,27 +15,28 @@
     *{box-sizing:border-box}
     html,body{height:100%}
     body{margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg)}
-
     /* Toolbar */
     #toolbar{
       position:fixed; bottom:calc(12px + var(--safe-bottom)); left:50%; transform:translateX(-50%);
       display:flex; gap:12px; padding:12px; border-radius:28px; z-index:40;
       background:var(--panel); border:1px solid var(--border); backdrop-filter:blur(10px);
       max-width:95vw; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+      touch-action:none; /* avoid Safari pinch targeting toolbar */
     }
     #toolbar::-webkit-scrollbar{ display:none }
     .btn{
       appearance:none; border:1px solid var(--border); background:var(--btn); color:var(--icon);
       width:56px; height:56px; border-radius:50%; display:grid; place-items:center;
-      cursor:pointer; transition:background .2s, transform .08s; flex:0 0 auto;
+      cursor:pointer; transition:background .2s, transform .08s, box-shadow .15s; flex:0 0 auto;
     }
     .btn:hover{ background:var(--btn-hov) }
     .btn:active{ transform:translateY(1px) }
-    .btn svg{ width:28px; height:28px; stroke:var(--icon) }
+    .btn svg{ width:26px; height:26px; stroke:var(--icon) }
+    .btn.active{ box-shadow:0 0 0 2px rgba(78,163,255,.9) inset }
 
     /* Stage */
-    #pdf-stage{ position:relative; height:100vh; overflow:auto; -webkit-overflow-scrolling:touch; background:var(--bg) }
-    #pdf-scroll{ position:relative; touch-action:pan-y }
+    #pdf-stage{ position:relative; height:100vh; overflow:hidden; background:var(--bg) }
+    #pdf-scroll{ position:relative; height:100%; overflow:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
     #pdf-container{
       position:relative; transform-origin:0 0;
       display:flex; flex-direction:column; align-items:center; gap:12px;
@@ -85,7 +87,7 @@
       z-index:60; background:rgba(20,24,32,.96); color:#e9eef5;
       border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:12px;
       width:min(92vw,520px); box-shadow:0 12px 40px rgba(0,0,0,.5);
-      display:block; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
+      display:block; opacity:0; pointer-events:none; transition:opacity .15s ease-out; touch-action:none;
     }
     .modal.show{ opacity:1; pointer-events:auto; }
     .modal .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px }
@@ -100,29 +102,39 @@
   <!-- Toolbar -->
   <div id="toolbar" aria-label="Tools">
     <button class="btn" data-act="open" title="Open PDF"><svg><use href="#i-folder"/></svg></button>
-    <button class="btn" data-act="text" title="Text"><svg><use href="#i-type"/></svg></button>
-    <button class="btn" data-act="stamp" title="Stamp"><svg><use href="#i-check"/></svg></button>
+    <button class="btn" data-act="text" title="Text (double‑tap/click)"><svg><use href="#i-type"/></svg></button>
+    <button class="btn" data-act="stamp" title="Stamp (✓)"><svg><use href="#i-check"/></svg></button>
     <button class="btn" data-act="sign" title="Signature"><svg><use href="#i-edit"/></svg></button>
     <button class="btn" data-act="undo" title="Undo"><svg><use href="#i-undo"/></svg></button>
     <button class="btn" data-act="redo" title="Redo"><svg><use href="#i-redo"/></svg></button>
     <button class="btn" data-act="settings" title="Text Settings"><svg><use href="#i-sliders"/></svg></button>
-    <button class="btn" data-act="save" title="Save PDF"><svg><use href="#i-download"/></svg></button>
+    <button class="btn" data-act="save" title="Save (flatten)"><svg><use href="#i-download"/></svg></button>
     <button class="btn" data-act="help" title="Help"><svg><use href="#i-help"/></svg></button>
   </div>
 
   <!-- Stage -->
-  <div id="pdf-stage"><div id="pdf-scroll"><div id="pdf-container"></div></div></div>
+  <div id="pdf-stage">
+    <div id="pdf-scroll">
+      <div id="pdf-container"></div>
+    </div>
+  </div>
 
   <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
 
   <!-- Restore banner -->
-  <div id="restore-banner"><span id="restore-text"></span><button id="restore-yes">Restore</button><button id="restore-no">Discard</button></div>
+  <div id="restore-banner">
+    <span id="restore-text">A previous session was found.</span>
+    <button id="restore-yes">Restore</button>
+    <button id="restore-no">Discard</button>
+  </div>
 
   <!-- Signature Modal -->
-  <div id="sign-modal" class="modal">
+  <div id="sign-modal" class="modal" role="dialog" aria-modal="true" aria-label="Signature">
     <h3 style="margin:6px 0 10px;font:600 16px system-ui">Draw your signature</h3>
-    <canvas id="sig-pad" width="500" height="200" style="display:block;max-width:100%;height:auto;background:#fff;border-radius:10px;touch-action:none"></canvas>
+    <!-- white background pad; exported ink is transparent -->
+    <canvas id="sig-pad" width="500" height="200"
+      style="display:block;max-width:100%;height:auto;background:#fff;border-radius:10px;touch-action:none"></canvas>
     <div class="row">
       <button class="chip" id="sig-use">Use</button>
       <button class="chip" id="sig-clear">Clear</button>
@@ -132,15 +144,15 @@
 
   <!-- Inline SVG icons -->
   <svg style="display:none">
-    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7h5l2 2h11v10H3z"/></symbol>
-    <symbol id="i-type" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol>
-    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></symbol>
-    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M12 5v4H8l4 4 4-4h-4V5z"/></symbol>
-    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M12 19v-4h4l-4-4-4 4h4v4z"/></symbol>
-    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3m8 18v-9m0-6V3m8 18v-5m0-7V3"/></symbol>
-    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 5v14m7-7H5"/></symbol>
-    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7h5l2 2h11v10H3z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-type" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M12 5v4H8l4 4 4-4h-4V5z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M12 19v-4h4l-4-4-4 4h4v4z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3m8 18v-9m0-6V3m8 18v-5m0-7V3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 5v14m7-7H5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.2 9a3 3 0 0 1 5.6 1c0 2-3 3-3 3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/></symbol>
   </svg>
 
   <!-- App -->
