@@ -68,16 +68,26 @@
     #toast.ok{ box-shadow:0 0 0 1px var(--ok) inset } #toast.err{ box-shadow:0 0 0 1px var(--err) inset }
     @keyframes fade{ from{opacity:0; transform:translateX(-50%) translateY(-6px)} to{opacity:1} }
 
-    /* Restore banner */
+    /* Restore banner (UPDATED to fit on small screens) */
     #restore-banner{
       position:fixed; top:48px; left:50%; transform:translateX(-50%);
       z-index:69; background:rgba(20,24,32,.96); color:#e9eef5;
       border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:8px 10px;
-      display:none; gap:8px; align-items:center; font:13px system-ui;
+      display:none; align-items:center; font:13px system-ui;
+      max-width:90vw;            /* prevent overflow off-screen */
+      flex-wrap:wrap;            /* allow wrapping if needed */
+      gap:6px;                   /* tighter gap for mobile */
+    }
+    #restore-text{
+      flex:1 1 auto;
+      overflow:hidden;
+      text-overflow:ellipsis;    /* truncate long filenames neatly */
+      white-space:nowrap;        /* keep message to one line */
     }
     #restore-banner button{
       appearance:none; border:1px solid rgba(255,255,255,.18);
       background:#1c2430; color:#e9eef5; border-radius:8px; padding:6px 10px; cursor:pointer;
+      flex:0 0 auto;
     }
 
     /* Signature Modal */
