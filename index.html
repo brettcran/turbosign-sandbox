@@ -2,13 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TurboSign — PDF Annotator (ESM)</title>
-
-  <!-- Block iOS Safari page zoom; we run our own internal pinch -->
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>TurboSign — PDF Annotator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark light">
-
   <style>
     :root{
       --bg:#0f131a; --fg:#e9eef5; --panel:rgba(255,255,255,.08); --border:rgba(255,255,255,.14);
@@ -25,9 +21,6 @@
       display:flex; gap:12px; padding:12px; border-radius:28px; z-index:40;
       background:var(--panel); border:1px solid var(--border); backdrop-filter:blur(10px);
       max-width:95vw; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
-      /* Do not let Safari treat this as a pinch target */
-      touch-action:none;
-      transform-origin:center bottom; will-change:transform;
     }
     #toolbar::-webkit-scrollbar{ display:none }
     .btn{
@@ -37,18 +30,15 @@
     }
     .btn:hover{ background:var(--btn-hov) }
     .btn:active{ transform:translateY(1px) }
-    .btn svg{ width:26px; height:26px; stroke:var(--icon) }
-    .btn.active{ box-shadow:0 0 0 2px rgba(78,163,255,.8) inset }
+    .btn svg{ width:28px; height:28px; stroke:var(--icon) }
 
     /* Stage */
-    #pdf-stage{ position:relative; height:100vh; overflow:hidden; background:var(--bg) }
-    #pdf-scroll{ position:relative; height:100%; overflow:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
+    #pdf-stage{ position:relative; height:100vh; overflow:auto; -webkit-overflow-scrolling:touch; background:var(--bg) }
+    #pdf-scroll{ position:relative; touch-action:pan-y }
     #pdf-container{
       position:relative; transform-origin:0 0;
       display:flex; flex-direction:column; align-items:center; gap:12px;
-      /* match JS math */
-      padding:20px 0 calc(140px + var(--safe-bottom)); 
-      min-height:60vh;
+      padding:20px 0 calc(140px + var(--safe-bottom)); min-height:60vh;
     }
     .page-wrap{ position:relative; width:max(320px,72vw); margin:12px 0 }
     canvas.pdfpage{ display:block; width:100%; height:auto; background:var(--canvas-bg); border-radius:6px; touch-action:none }
@@ -77,6 +67,18 @@
     #toast.ok{ box-shadow:0 0 0 1px var(--ok) inset } #toast.err{ box-shadow:0 0 0 1px var(--err) inset }
     @keyframes fade{ from{opacity:0; transform:translateX(-50%) translateY(-6px)} to{opacity:1} }
 
+    /* Restore banner */
+    #restore-banner{
+      position:fixed; top:48px; left:50%; transform:translateX(-50%);
+      z-index:69; background:rgba(20,24,32,.96); color:#e9eef5;
+      border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:8px 10px;
+      display:none; gap:8px; align-items:center; font:13px system-ui;
+    }
+    #restore-banner button{
+      appearance:none; border:1px solid rgba(255,255,255,.18);
+      background:#1c2430; color:#e9eef5; border-radius:8px; padding:6px 10px; cursor:pointer;
+    }
+
     /* Signature Modal */
     .modal{
       position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
@@ -84,7 +86,6 @@
       border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:12px;
       width:min(92vw,520px); box-shadow:0 12px 40px rgba(0,0,0,.5);
       display:block; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
-      touch-action:none;
     }
     .modal.show{ opacity:1; pointer-events:auto; }
     .modal .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px }
@@ -93,48 +94,35 @@
   </style>
 </head>
 <body>
+  <!-- Hidden file input -->
   <input id="file-input" type="file" accept="application/pdf,.pdf" />
 
+  <!-- Toolbar -->
   <div id="toolbar" aria-label="Tools">
-    <button class="btn" data-act="open" title="Open PDF">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M3 19h18M4 19V7a2 2 0 0 1 2-2h7l5 5v9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 7h5v5H9z" stroke="currentColor" stroke-width="2"/></svg>
-    </button>
-    <button class="btn" data-act="text" title="Text (double‑tap/click)">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M10 6v12M14 6v12M6 18h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </button>
-    <button class="btn" data-act="stamp" title="Stamp (✓)">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M4 12l4 4 12-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <button class="btn" data-act="sign" title="Signature">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M3 17s2-3 5-3 4 4 7 4 6-2 6-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </button>
-    <button class="btn" data-act="undo" title="Undo">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M9 10H3l4-4m14 8a8 8 0 1 1-8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <button class="btn" data-act="redo" title="Redo">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M15 10h6l-4-4M3 14a8 8 0 1 0 8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <button class="btn" data-act="help" title="Help">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M9 9a3 3 0 1 1 3 3v2m0 3h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </button>
-    <button class="btn" data-act="save" title="Save">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-8h10v6H7V7z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </button>
+    <button class="btn" data-act="open" title="Open PDF"><svg><use href="#i-folder"/></svg></button>
+    <button class="btn" data-act="text" title="Text"><svg><use href="#i-type"/></svg></button>
+    <button class="btn" data-act="stamp" title="Stamp"><svg><use href="#i-check"/></svg></button>
+    <button class="btn" data-act="sign" title="Signature"><svg><use href="#i-edit"/></svg></button>
+    <button class="btn" data-act="undo" title="Undo"><svg><use href="#i-undo"/></svg></button>
+    <button class="btn" data-act="redo" title="Redo"><svg><use href="#i-redo"/></svg></button>
+    <button class="btn" data-act="settings" title="Text Settings"><svg><use href="#i-sliders"/></svg></button>
+    <button class="btn" data-act="save" title="Save PDF"><svg><use href="#i-download"/></svg></button>
+    <button class="btn" data-act="help" title="Help"><svg><use href="#i-help"/></svg></button>
   </div>
 
-  <div id="pdf-stage">
-    <div id="pdf-scroll">
-      <div id="pdf-container"></div>
-    </div>
-  </div>
+  <!-- Stage -->
+  <div id="pdf-stage"><div id="pdf-scroll"><div id="pdf-container"></div></div></div>
 
+  <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
 
+  <!-- Restore banner -->
+  <div id="restore-banner"><span id="restore-text"></span><button id="restore-yes">Restore</button><button id="restore-no">Discard</button></div>
+
   <!-- Signature Modal -->
-  <div id="sign-modal" class="modal" role="dialog" aria-modal="true" aria-label="Signature">
+  <div id="sign-modal" class="modal">
     <h3 style="margin:6px 0 10px;font:600 16px system-ui">Draw your signature</h3>
-    <canvas id="sig-pad" width="500" height="200"
-      style="display:block;max-width:100%;height:auto;background:#fff;border-radius:10px;touch-action:none"></canvas>
+    <canvas id="sig-pad" width="500" height="200" style="display:block;max-width:100%;height:auto;background:#fff;border-radius:10px;touch-action:none"></canvas>
     <div class="row">
       <button class="chip" id="sig-use">Use</button>
       <button class="chip" id="sig-clear">Clear</button>
@@ -142,6 +130,20 @@
     </div>
   </div>
 
+  <!-- Inline SVG icons -->
+  <svg style="display:none">
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7h5l2 2h11v10H3z"/></symbol>
+    <symbol id="i-type" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M12 5v4H8l4 4 4-4h-4V5z"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M12 19v-4h4l-4-4-4 4h4v4z"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3m8 18v-9m0-6V3m8 18v-5m0-7V3"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 5v14m7-7H5"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17"/></symbol>
+  </svg>
+
+  <!-- App -->
   <script type="module" src="./lib/app/app.mjs"></script>
 </body>
 </html>
