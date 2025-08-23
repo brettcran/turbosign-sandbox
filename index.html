@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TurboSign — PDF Annotator (4.1 Gold)</title>
+  <title>TurboSign — PDF Annotator (4.0 Gold)</title>
   <!-- We run our own in-stage pinch zoom. Prevent Safari page-zoom. -->
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
   <meta name="color-scheme" content="dark light">
@@ -15,13 +15,14 @@
     *{box-sizing:border-box}
     html,body{height:100%}
     body{margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg)}
+
     /* Toolbar */
     #toolbar{
       position:fixed; bottom:calc(12px + var(--safe-bottom)); left:50%; transform:translateX(-50%);
       display:flex; gap:12px; padding:12px; border-radius:28px; z-index:40;
       background:var(--panel); border:1px solid var(--border); backdrop-filter:blur(10px);
       max-width:95vw; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
-      touch-action:none; /* avoid Safari pinch targeting toolbar */
+      touch-action:none; /* keep Safari pinch off toolbar */
     }
     #toolbar::-webkit-scrollbar{ display:none }
     .btn{
@@ -132,7 +133,7 @@
   <!-- Signature Modal -->
   <div id="sign-modal" class="modal" role="dialog" aria-modal="true" aria-label="Signature">
     <h3 style="margin:6px 0 10px;font:600 16px system-ui">Draw your signature</h3>
-    <!-- white background pad; exported ink is transparent -->
+    <!-- white pad for comfort; exported ink remains transparent -->
     <canvas id="sig-pad" width="500" height="200"
       style="display:block;max-width:100%;height:auto;background:#fff;border-radius:10px;touch-action:none"></canvas>
     <div class="row">
@@ -142,7 +143,7 @@
     </div>
   </div>
 
-  <!-- Inline SVG icons -->
+  <!-- Inline SVG icons (simple, local, no deps) -->
   <svg style="display:none">
     <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7h5l2 2h11v10H3z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="i-type" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
