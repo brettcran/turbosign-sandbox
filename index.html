@@ -25,7 +25,9 @@
       display:flex; gap:12px; padding:12px; border-radius:28px; z-index:40;
       background:var(--panel); border:1px solid var(--border); backdrop-filter:blur(10px);
       max-width:95vw; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
-      touch-action:none; transform-origin:center bottom; will-change:transform;
+      /* Do not let Safari treat this as a pinch target */
+      touch-action:none;
+      transform-origin:center bottom; will-change:transform;
     }
     #toolbar::-webkit-scrollbar{ display:none }
     .btn{
@@ -44,7 +46,7 @@
     #pdf-container{
       position:relative; transform-origin:0 0;
       display:flex; flex-direction:column; align-items:center; gap:12px;
-      /* matches math in JS for baseH padding (20 top + 140 bottom) */
+      /* match JS math */
       padding:20px 0 calc(140px + var(--safe-bottom)); 
       min-height:60vh;
     }
