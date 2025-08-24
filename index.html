@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TurboSign - PDF Annotator (ESM)</title>
+  <title>TurboSign — PDF Annotator (ESM)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark light">
   <style>
@@ -45,10 +45,7 @@
     canvas.pdfpage{ display:block; width:100%; height:auto; background:var(--canvas-bg); border-radius:6px; touch-action:none }
 
     /* Overlays & annotations */
-    .overlay{
-      position:absolute; inset:0; pointer-events:auto; touch-action:manipulation;
-      overflow:hidden; /* clip annotations to page bounds */
-    }
+    .overlay{ position:absolute; inset:0; pointer-events:auto; touch-action:manipulation; }
     .anno{ position:absolute; user-select:none; touch-action:none; }
     .anno.selected{ outline:1.5px dashed #4ea3ff; outline-offset:2px }
     .anno.text{
@@ -71,21 +68,21 @@
     #toast.ok{ box-shadow:0 0 0 1px var(--ok) inset } #toast.err{ box-shadow:0 0 0 1px var(--err) inset }
     @keyframes fade{ from{opacity:0; transform:translateX(-50%) translateY(-6px)} to{opacity:1} }
 
-    /* Restore banner (fit small screens) */
+    /* Restore banner — moved ABOVE toolbar so it never blocks the buttons */
     #restore-banner{
-      position:fixed; top:48px; left:50%; transform:translateX(-50%);
-      z-index:69; background:rgba(20,24,32,.96); color:#e9eef5;
-      border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:8px 10px;
-      display:none; align-items:center; font:13px system-ui;
-      max-width:90vw; flex-wrap:wrap; gap:6px;
-    }
-    #restore-text{
-      flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      position:fixed;
+      left:50%; transform:translateX(-50%);
+      bottom:calc(100px + var(--safe-bottom)); /* clear the toolbar bubble */
+      z-index:50; /* below toast (70), above toolbar (40) */
+      background:rgba(20,24,32,.96); color:#e9eef5;
+      border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:10px 12px;
+      display:none; gap:8px; align-items:center; font:13px system-ui;
+      max-width:min(92vw, 680px); line-height:1.25; word-break:break-word;
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
     }
     #restore-banner button{
       appearance:none; border:1px solid rgba(255,255,255,.18);
-      background:#1c2430; color:#e9eef5; border-radius:8px; padding:6px 10px; cursor:pointer;
-      flex:0 0 auto;
+      background:#1c2430; color:#e9eef5; border-radius:8px; padding:6px 10px; cursor:pointer; flex:0 0 auto;
     }
 
     /* Signature Modal */
@@ -109,19 +106,15 @@
   <!-- Toolbar -->
   <div id="toolbar" aria-label="Tools">
     <button class="btn" data-act="open" title="Open PDF" type="button" aria-label="Open">
-      <!-- folder -->
       <svg viewBox="0 0 24 24"><path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7V5a2 2 0 0 1 2-2h3l2 2h4"/></svg>
     </button>
-    <button class="btn" data-act="text" title="Text (double-tap/click)" type="button" aria-label="Text">
-      <!-- T -->
+    <button class="btn" data-act="text" title="Text (double‑tap/click)" type="button" aria-label="Text">
       <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M12 6v12"/></svg>
     </button>
-    <button class="btn" data-act="stamp" title="Stamp (check)" type="button" aria-label="Stamp">
-      <!-- check -->
+    <button class="btn" data-act="stamp" title="Stamp (✓)" type="button" aria-label="Stamp">
       <svg viewBox="0 0 24 24"><path d="M4 12l4 4 12-12"/></svg>
     </button>
     <button class="btn" data-act="sign" title="Signature" type="button" aria-label="Signature">
-      <!-- pen -->
       <svg viewBox="0 0 24 24"><path d="M12 19l7-7a2.8 2.8 0 0 0-4-4l-7 7-2 6z"/></svg>
     </button>
     <button class="btn" data-act="undo" title="Undo" type="button" aria-label="Undo">
@@ -148,8 +141,8 @@
   <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <!-- Restore banner -->
-  <div id="restore-banner">
+  <!-- Restore banner (now above the toolbar) -->
+  <div id="restore-banner" role="dialog" aria-live="polite" aria-label="Restore previous session">
     <span id="restore-text">A previous session was found.</span>
     <button id="restore-yes" type="button">Restore</button>
     <button id="restore-no" type="button">Discard</button>
